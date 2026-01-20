@@ -1,5 +1,5 @@
 import httpx
-from bot.config import settings
+from config import settings
 
 
 class APIClient:

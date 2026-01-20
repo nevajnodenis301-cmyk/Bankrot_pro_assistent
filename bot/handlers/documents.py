@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, FSInputFile, BufferedInputFile
 from aiogram.filters import Command
 import httpx
-from bot.config import settings
+from config import settings
 
 router = Router()
 

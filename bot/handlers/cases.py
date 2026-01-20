@@ -2,9 +2,9 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from bot.states.case_states import CaseCreation
-from bot.services.api_client import APIClient
-from bot.keyboards.inline import get_yes_no_keyboard, get_cases_keyboard, get_case_keyboard
+from states.case_states import CaseCreation
+from services.api_client import APIClient
+from keyboards.inline import get_yes_no_keyboard, get_cases_keyboard, get_case_keyboard
 
 router = Router()
 api = APIClient()

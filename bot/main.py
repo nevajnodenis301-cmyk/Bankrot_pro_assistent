@@ -3,8 +3,8 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
-from bot.config import settings
-from bot.handlers import start, cases, documents, ai_assistant
+from config import settings
+from handlers import start, cases, documents, ai_assistant
 
 # Configure logging
 logging.basicConfig(
