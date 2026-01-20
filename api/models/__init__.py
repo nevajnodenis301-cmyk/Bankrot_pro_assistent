@@ -1,3 +1,3 @@
-from api.models.case import Case, Creditor
+from models.case import Case, Creditor
 
 __all__ = ["Case", "Creditor"]

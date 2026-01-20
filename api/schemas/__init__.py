@@ -1,4 +1,4 @@
-from api.schemas.case import (
+from schemas.case import (
     CaseCreate,
     CaseUpdate,
     CaseResponse,

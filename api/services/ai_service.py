@@ -1,6 +1,6 @@
 import httpx
 from abc import ABC, abstractmethod
-from api.config import settings
+from config import settings
 
 SYSTEM_PROMPT = """Ты — юридический AI-ассистент по банкротству физических лиц в России.
 

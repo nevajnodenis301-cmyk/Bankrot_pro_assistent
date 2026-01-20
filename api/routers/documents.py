@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from io import BytesIO
-from api.database import get_db
-from api.services.case_service import CaseService
-from api.services.document_service import generate_bankruptcy_application
+from database import get_db
+from services.case_service import CaseService
+from services.document_service import generate_bankruptcy_application
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 

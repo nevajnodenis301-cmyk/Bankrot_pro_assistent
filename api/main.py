@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routers import cases, creditors, documents, ai
+from routers import cases, creditors, documents, ai
 
 app = FastAPI(
     title="Банкрот ПРО API",

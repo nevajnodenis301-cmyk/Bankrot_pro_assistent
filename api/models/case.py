@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import String, Text, Numeric, BigInteger, Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from api.database import Base
+from database import Base
 
 
 class Case(Base):

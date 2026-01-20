@@ -2,8 +2,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from api.models.case import Case, Creditor
-from api.schemas.case import CaseCreate, CaseUpdate
+from models.case import Case, Creditor
+from schemas.case import CaseCreate, CaseUpdate
 
 
 class CaseService:

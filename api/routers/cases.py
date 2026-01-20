@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from api.database import get_db
-from api.schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
-from api.services.case_service import CaseService
+from database import get_db
+from schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
+from services.case_service import CaseService
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
