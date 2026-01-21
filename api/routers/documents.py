@@ -5,8 +5,9 @@ from io import BytesIO
 from database import get_db
 from services.case_service import CaseService
 from services.document_service import generate_bankruptcy_application, generate_bankruptcy_petition
+from security import require_api_token
 
-router = APIRouter(prefix="/api/documents", tags=["documents"])
+router = APIRouter(prefix="/api/documents", tags=["documents"], dependencies=[Depends(require_api_token)])
 
 
 @router.get("/{case_id}/bankruptcy-application")
@@ -37,7 +38,12 @@ async def get_bankruptcy_application(case_id: int, db: AsyncSession = Depends(ge
         ],
     }
 
-    doc_bytes = generate_bankruptcy_application(case_data)
+    try:
+        doc_bytes = generate_bankruptcy_application(case_data)
+    except FileNotFoundError:
+        raise HTTPException(500, "Шаблон документа не найден")
+    except Exception as e:
+        raise HTTPException(500, f"Ошибка генерации документа: {e}")
 
     return StreamingResponse(
         BytesIO(doc_bytes),
@@ -55,7 +61,12 @@ async def get_bankruptcy_petition(case_id: int, db: AsyncSession = Depends(get_d
         raise HTTPException(404, "Дело не найдено")
 
     # Generate document using new service
-    doc_buffer = generate_bankruptcy_petition(case)
+    try:
+        doc_buffer = generate_bankruptcy_petition(case)
+    except FileNotFoundError:
+        raise HTTPException(500, "Шаблон документа не найден")
+    except Exception as e:
+        raise HTTPException(500, f"Ошибка генерации документа: {e}")
 
     return StreamingResponse(
         doc_buffer,

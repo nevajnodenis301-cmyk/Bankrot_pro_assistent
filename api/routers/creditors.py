@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from schemas.case import CreditorCreate, CreditorResponse
 from services.case_service import CaseService
+from security import require_api_token
 
-router = APIRouter(prefix="/api/creditors", tags=["creditors"])
+router = APIRouter(prefix="/api/creditors", tags=["creditors"], dependencies=[Depends(require_api_token)])
 
 
 @router.post("/{case_id}", response_model=CreditorResponse, status_code=201)

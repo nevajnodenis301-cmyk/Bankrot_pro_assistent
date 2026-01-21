@@ -4,6 +4,8 @@ import os
 from datetime import date
 
 API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_TOKEN = os.getenv("API_TOKEN")
+DEFAULT_HEADERS = {"X-API-Token": API_TOKEN} if API_TOKEN else {}
 
 st.title("➕ Новое дело")
 
@@ -13,7 +15,7 @@ if "selected_case_id" in st.session_state:
     st.info(f"Редактирование дела ID: {case_id}")
 
     try:
-        response = httpx.get(f"{API_URL}/api/cases/{case_id}")
+        response = httpx.get(f"{API_URL}/api/cases/{case_id}", headers=DEFAULT_HEADERS)
         response.raise_for_status()
         existing_case = response.json()
     except Exception as e:
@@ -232,7 +234,9 @@ with st.form("case_form"):
                 if existing_case:
                     # Update
                     data["telegram_user_id"] = telegram_user_id if telegram_user_id > 0 else None
-                    response = httpx.put(f"{API_URL}/api/cases/{case_id}", json=data, timeout=30.0)
+                    response = httpx.put(
+                        f"{API_URL}/api/cases/{case_id}", json=data, timeout=30.0, headers=DEFAULT_HEADERS
+                    )
                     response.raise_for_status()
                     st.success("✅ Дело обновлено!")
                 else:
@@ -242,12 +246,19 @@ with st.form("case_form"):
                         "total_debt": total_debt if total_debt > 0 else None,
                         "telegram_user_id": telegram_user_id if telegram_user_id > 0 else None,
                     }
-                    response = httpx.post(f"{API_URL}/api/cases", json=create_data, timeout=30.0)
+                    response = httpx.post(
+                        f"{API_URL}/api/cases", json=create_data, timeout=30.0, headers=DEFAULT_HEADERS
+                    )
                     response.raise_for_status()
                     case = response.json()
 
                     # Update with full data
-                    response = httpx.put(f"{API_URL}/api/cases/{case['id']}", json=data, timeout=30.0)
+                    response = httpx.put(
+                        f"{API_URL}/api/cases/{case['id']}",
+                        json=data,
+                        timeout=30.0,
+                        headers=DEFAULT_HEADERS,
+                    )
                     response.raise_for_status()
 
                     st.success(f"✅ Дело создано! Номер: {case['case_number']}")
@@ -269,7 +280,9 @@ if existing_case:
         if st.button("📥 Скачать заявление о банкротстве (Полное)"):
             try:
                 response = httpx.get(
-                    f"{API_URL}/api/documents/cases/{case_id}/document/petition", timeout=60.0
+                    f"{API_URL}/api/documents/cases/{case_id}/document/petition",
+                    timeout=60.0,
+                    headers=DEFAULT_HEADERS,
                 )
                 response.raise_for_status()
 
@@ -285,7 +298,11 @@ if existing_case:
     with col2:
         if st.button("📥 Скачать заявление (Базовое)"):
             try:
-                response = httpx.get(f"{API_URL}/api/documents/{case_id}/bankruptcy-application", timeout=60.0)
+                response = httpx.get(
+                    f"{API_URL}/api/documents/{case_id}/bankruptcy-application",
+                    timeout=60.0,
+                    headers=DEFAULT_HEADERS,
+                )
                 response.raise_for_status()
 
                 st.download_button(

@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 
 API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_TOKEN = os.getenv("API_TOKEN")
+DEFAULT_HEADERS = {"X-API-Token": API_TOKEN} if API_TOKEN else {}
 
 st.title("📋 Список дел")
 
@@ -12,7 +14,7 @@ st.title("📋 Список дел")
 def get_cases():
     """Fetch all cases from API"""
     try:
-        response = httpx.get(f"{API_URL}/api/cases")
+        response = httpx.get(f"{API_URL}/api/cases", headers=DEFAULT_HEADERS)
         response.raise_for_status()
         return response.json()
     except Exception as e:

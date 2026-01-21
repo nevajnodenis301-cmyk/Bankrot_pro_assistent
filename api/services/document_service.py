@@ -32,11 +32,12 @@ def format_money(amount: Decimal | float | None) -> tuple[int, int]:
     if amount is None:
         return (0, 0)
 
-    if isinstance(amount, Decimal):
-        amount = float(amount)
+    if not isinstance(amount, Decimal):
+        amount = Decimal(str(amount))
 
-    rubles = int(amount)
-    kopeks = int(round((amount - rubles) * 100))
+    normalized = amount.quantize(Decimal("0.01"))
+    rubles = int(normalized)
+    kopeks = int((normalized - Decimal(rubles)) * 100)
 
     return (rubles, kopeks)
 
@@ -128,6 +129,8 @@ def generate_bankruptcy_petition(case) -> BytesIO:
         BytesIO: Generated document
     """
     template_path = TEMPLATES_DIR / "bankruptcy_application.docx"
+    if not template_path.exists():
+        raise FileNotFoundError(template_path)
     doc = DocxTemplate(template_path)
 
     # Get gender for word declension

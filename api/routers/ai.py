@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from services.ai_service import get_ai_provider
+from security import require_api_token
 
-router = APIRouter(prefix="/api/ai", tags=["ai"])
+router = APIRouter(prefix="/api/ai", tags=["ai"], dependencies=[Depends(require_api_token)])
 
 
 class AIQuestion(BaseModel):
@@ -24,4 +25,4 @@ async def ask_ai(data: AIQuestion):
         answer = await provider.ask(data.question)
         return AIAnswer(answer=answer)
     except Exception as e:
-        raise HTTPException(500, f"Ошибка AI сервиса: {str(e)}")
+        raise HTTPException(503, "AI сервис временно недоступен")

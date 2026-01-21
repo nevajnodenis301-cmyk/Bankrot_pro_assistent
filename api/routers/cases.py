@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
 from services.case_service import CaseService
+from security import require_api_token
 
-router = APIRouter(prefix="/api/cases", tags=["cases"])
+router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(require_api_token)])
 
 
 @router.post("", response_model=CaseResponse, status_code=201)
@@ -18,11 +19,15 @@ async def create_case(data: CaseCreate, db: AsyncSession = Depends(get_db)):
 async def list_cases(
     telegram_user_id: int | None = None,
     status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
 ):
     """List all cases with optional filters"""
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
     service = CaseService(db)
-    cases = await service.get_all(telegram_user_id=telegram_user_id, status=status)
+    cases = await service.get_all(telegram_user_id=telegram_user_id, status=status, limit=limit, offset=offset)
 
     # Return public data only
     return [

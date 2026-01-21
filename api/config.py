@@ -12,6 +12,8 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "change_me_32_char_secret_key_here"
+    API_TOKEN: str | None = None
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:8501", "http://localhost:3000"]
 
     # AI Provider
     AI_PROVIDER: str = "timeweb"

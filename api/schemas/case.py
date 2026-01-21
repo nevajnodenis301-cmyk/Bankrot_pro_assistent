@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 # === Creditors ===
@@ -23,6 +23,13 @@ class CaseCreate(BaseModel):
     full_name: str
     total_debt: Decimal | None = None
     telegram_user_id: int | None = None
+
+    @field_validator("total_debt")
+    @classmethod
+    def validate_debt(cls, v: Decimal | None):
+        if v is not None and v < 0:
+            raise ValueError("total_debt must be non-negative")
+        return v
 
 
 # === Case: update ===
@@ -49,6 +56,60 @@ class CaseUpdate(BaseModel):
     total_debt: Decimal | None = None
     monthly_income: Decimal | None = None
     notes: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str | None):
+        if v is None:
+            return v
+        allowed = {"new", "in_progress", "court", "completed"}
+        if v not in allowed:
+            raise ValueError(f"status must be one of {', '.join(sorted(allowed))}")
+        return v
+
+    @field_validator("total_debt", "monthly_income")
+    @classmethod
+    def validate_money(cls, v: Decimal | None):
+        if v is not None and v < 0:
+            raise ValueError("monetary values must be non-negative")
+        return v
+
+    @field_validator("passport_series")
+    @classmethod
+    def validate_passport_series(cls, v: str | None):
+        if v and len(v) != 4:
+            raise ValueError("passport_series must be 4 digits")
+        return v
+
+    @field_validator("passport_number")
+    @classmethod
+    def validate_passport_number(cls, v: str | None):
+        if v and len(v) != 6:
+            raise ValueError("passport_number must be 6 digits")
+        return v
+
+    @field_validator("inn")
+    @classmethod
+    def validate_inn(cls, v: str | None):
+        if v and len(v) not in (10, 12):
+            raise ValueError("inn must be 10 or 12 digits")
+        return v
+
+    @field_validator("snils")
+    @classmethod
+    def validate_snils(cls, v: str | None):
+        if v and len(v.replace("-", "").replace(" ", "")) not in (11, 14):
+            raise ValueError("snils must contain 11 digits (with or without separators)")
+        return v
+
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, v: str | None):
+        if v is None or v == "":
+            return None
+        if v not in {"M", "F"}:
+            raise ValueError("gender must be 'M' or 'F'")
+        return v
 
 
 # === Case: public response (for bot) ===

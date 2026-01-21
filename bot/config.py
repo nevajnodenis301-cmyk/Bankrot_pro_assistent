@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     TELEGRAM_TOKEN: str
     API_BASE_URL: str = "http://localhost:8000"
     REDIS_URL: str = "redis://localhost:6379/1"
+    API_TOKEN: str | None = None
 
 
 settings = Settings()
