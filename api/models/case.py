@@ -23,6 +23,13 @@ class Case(Base):
     passport_number: Mapped[str | None] = mapped_column(String(6))
     passport_issued_by: Mapped[str | None] = mapped_column(Text)
     passport_issued_date: Mapped[datetime | None] = mapped_column(Date)
+    passport_code: Mapped[str | None] = mapped_column(String(10))  # код подразделения
+    court_name: Mapped[str | None] = mapped_column(String(255))  # название арбитражного суда
+    court_address: Mapped[str | None] = mapped_column(Text)  # адрес суда
+    gender: Mapped[str | None] = mapped_column(String(1))  # M or F (for word declension in Russian)
+    marital_status: Mapped[str | None] = mapped_column(String(50))  # married/single/divorced/widowed
+    sro_name: Mapped[str | None] = mapped_column(String(255))  # название СРО финансового управляющего
+    sro_address: Mapped[str | None] = mapped_column(Text)  # адрес СРО
     inn: Mapped[str | None] = mapped_column(String(12))
     snils: Mapped[str | None] = mapped_column(String(14))
     birth_date: Mapped[datetime | None] = mapped_column(Date)

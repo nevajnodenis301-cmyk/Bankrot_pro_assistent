@@ -33,6 +33,13 @@ class CaseUpdate(BaseModel):
     passport_number: str | None = None
     passport_issued_by: str | None = None
     passport_issued_date: date | None = None
+    passport_code: str | None = None
+    court_name: str | None = None
+    court_address: str | None = None
+    gender: str | None = None
+    marital_status: str | None = None
+    sro_name: str | None = None
+    sro_address: str | None = None
     inn: str | None = None
     snils: str | None = None
     birth_date: date | None = None
@@ -69,6 +76,13 @@ class CaseResponse(BaseModel):
     passport_number: str | None
     passport_issued_by: str | None
     passport_issued_date: date | None
+    passport_code: str | None
+    court_name: str | None
+    court_address: str | None
+    gender: str | None
+    marital_status: str | None
+    sro_name: str | None
+    sro_address: str | None
     inn: str | None
     snils: str | None
     birth_date: date | None

@@ -69,6 +69,32 @@ with st.form("case_form"):
             step=1,
         )
 
+    col1, col2 = st.columns(2)
+
+    with col1:
+        gender = st.selectbox(
+            "Пол",
+            options=["M", "F", ""],
+            format_func=lambda x: {"M": "Мужской", "F": "Женский", "": "Не указан"}[x],
+            index=["M", "F", ""].index(existing_case.get("gender", "")) if existing_case else 2,
+        )
+
+    with col2:
+        marital_status = st.selectbox(
+            "Семейное положение",
+            options=["single", "married", "divorced", "widowed", ""],
+            format_func=lambda x: {
+                "single": "Холост/Не замужем",
+                "married": "Женат/Замужем",
+                "divorced": "Разведен(а)",
+                "widowed": "Вдовец/Вдова",
+                "": "Не указано",
+            }[x],
+            index=["single", "married", "divorced", "widowed", ""].index(existing_case.get("marital_status", ""))
+            if existing_case
+            else 4,
+        )
+
     st.divider()
     st.subheader("📄 Паспортные данные")
 
@@ -95,6 +121,13 @@ with st.form("case_form"):
             else None,
             max_value=date.today(),
         )
+
+    passport_code = st.text_input(
+        "Код подразделения",
+        value=existing_case.get("passport_code", "") if existing_case else "",
+        max_chars=10,
+        placeholder="000-000",
+    )
 
     st.divider()
     st.subheader("🆔 Документы")
@@ -136,6 +169,33 @@ with st.form("case_form"):
 
     notes = st.text_area("Примечания", value=existing_case.get("notes", "") if existing_case else "", height=100)
 
+    st.divider()
+    st.subheader("⚖️ Суд и СРО")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        court_name = st.text_input(
+            "Название арбитражного суда",
+            value=existing_case.get("court_name", "") if existing_case else "",
+            max_chars=255,
+        )
+
+        court_address = st.text_area(
+            "Адрес суда", value=existing_case.get("court_address", "") if existing_case else "", height=100
+        )
+
+    with col2:
+        sro_name = st.text_input(
+            "Название СРО финансового управляющего",
+            value=existing_case.get("sro_name", "") if existing_case else "",
+            max_chars=255,
+        )
+
+        sro_address = st.text_area(
+            "Адрес СРО", value=existing_case.get("sro_address", "") if existing_case else "", height=100
+        )
+
     # Submit
     submitted = st.form_submit_button("💾 Сохранить" if existing_case else "➕ Создать дело")
 
@@ -150,15 +210,22 @@ with st.form("case_form"):
                     "birth_date": birth_date.isoformat() if birth_date else None,
                     "phone": phone or None,
                     "email": email or None,
+                    "gender": gender or None,
+                    "marital_status": marital_status or None,
                     "passport_series": passport_series or None,
                     "passport_number": passport_number or None,
                     "passport_issued_by": passport_issued_by or None,
                     "passport_issued_date": passport_issued_date.isoformat() if passport_issued_date else None,
+                    "passport_code": passport_code or None,
                     "inn": inn or None,
                     "snils": snils or None,
                     "registration_address": registration_address or None,
                     "total_debt": total_debt if total_debt > 0 else None,
                     "monthly_income": monthly_income if monthly_income > 0 else None,
+                    "court_name": court_name or None,
+                    "court_address": court_address or None,
+                    "sro_name": sro_name or None,
+                    "sro_address": sro_address or None,
                     "notes": notes or None,
                 }
 
@@ -196,16 +263,36 @@ if existing_case:
     st.divider()
     st.subheader("📄 Документы")
 
-    if st.button("📥 Скачать заявление о банкротстве"):
-        try:
-            response = httpx.get(f"{API_URL}/api/documents/{case_id}/bankruptcy-application", timeout=60.0)
-            response.raise_for_status()
+    col1, col2 = st.columns(2)
 
-            st.download_button(
-                label="💾 Сохранить документ",
-                data=response.content,
-                file_name=f"bankruptcy_{existing_case['case_number']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            )
-        except Exception as e:
-            st.error(f"❌ Ошибка генерации документа: {str(e)}")
+    with col1:
+        if st.button("📥 Скачать заявление о банкротстве (Полное)"):
+            try:
+                response = httpx.get(
+                    f"{API_URL}/api/documents/cases/{case_id}/document/petition", timeout=60.0
+                )
+                response.raise_for_status()
+
+                st.download_button(
+                    label="💾 Сохранить документ",
+                    data=response.content,
+                    file_name=f"bankruptcy_petition_{existing_case['case_number']}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            except Exception as e:
+                st.error(f"❌ Ошибка генерации документа: {str(e)}")
+
+    with col2:
+        if st.button("📥 Скачать заявление (Базовое)"):
+            try:
+                response = httpx.get(f"{API_URL}/api/documents/{case_id}/bankruptcy-application", timeout=60.0)
+                response.raise_for_status()
+
+                st.download_button(
+                    label="💾 Сохранить базовый документ",
+                    data=response.content,
+                    file_name=f"bankruptcy_{existing_case['case_number']}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            except Exception as e:
+                st.error(f"❌ Ошибка генерации документа: {str(e)}")

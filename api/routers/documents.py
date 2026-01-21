@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from io import BytesIO
 from database import get_db
 from services.case_service import CaseService
-from services.document_service import generate_bankruptcy_application
+from services.document_service import generate_bankruptcy_application, generate_bankruptcy_petition
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -43,4 +43,22 @@ async def get_bankruptcy_application(case_id: int, db: AsyncSession = Depends(ge
         BytesIO(doc_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename=bankruptcy_{case.case_number}.docx"},
+    )
+
+
+@router.get("/cases/{case_id}/document/petition")
+async def get_bankruptcy_petition(case_id: int, db: AsyncSession = Depends(get_db)):
+    """Generate bankruptcy petition document with full Russian formatting"""
+    service = CaseService(db)
+    case = await service.get_by_id(case_id)
+    if not case:
+        raise HTTPException(404, "Дело не найдено")
+
+    # Generate document using new service
+    doc_buffer = generate_bankruptcy_petition(case)
+
+    return StreamingResponse(
+        doc_buffer,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename=bankruptcy_petition_{case.case_number}.docx"},
     )
