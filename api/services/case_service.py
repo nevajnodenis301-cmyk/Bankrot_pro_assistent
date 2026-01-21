@@ -35,7 +35,8 @@ class CaseService:
         self.db.add(case)
         await self.db.commit()
         await self.db.refresh(case)
-        return case
+        # Reload with creditors
+        return await self.get_by_id(case.id)
 
     async def get_all(
         self, telegram_user_id: int | None = None, status: str | None = None
