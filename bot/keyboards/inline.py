@@ -2,12 +2,16 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_yes_no_keyboard() -> InlineKeyboardMarkup:
-    """Yes/No inline keyboard"""
+    """Yes/No inline keyboard with navigation"""
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Да", callback_data="yes"),
-                InlineKeyboardButton(text="Нет", callback_data="no"),
+                InlineKeyboardButton(text="✅ Да", callback_data="yes"),
+                InlineKeyboardButton(text="❌ Нет, завершить", callback_data="no"),
+            ],
+            [
+                InlineKeyboardButton(text="⬅️ Назад", callback_data="back_creditor"),
+                InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_case"),
             ]
         ]
     )

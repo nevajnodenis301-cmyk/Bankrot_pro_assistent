@@ -11,3 +11,18 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
     )
     return keyboard
+
+
+def get_navigation_keyboard(show_back: bool = True) -> ReplyKeyboardMarkup:
+    """Navigation keyboard for FSM with Back and Cancel buttons"""
+    buttons = []
+    if show_back:
+        buttons.append([KeyboardButton(text="⬅️ Назад"), KeyboardButton(text="❌ Отмена")])
+    else:
+        buttons.append([KeyboardButton(text="❌ Отмена")])
+
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=buttons,
+        resize_keyboard=True,
+    )
+    return keyboard

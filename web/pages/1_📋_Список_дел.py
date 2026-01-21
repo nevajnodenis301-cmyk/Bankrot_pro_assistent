@@ -64,13 +64,29 @@ else:
             col1, col2 = st.columns(2)
 
             with col1:
-                st.write(f"**Статус:** {case['status']}")
+                # Translate status to Russian
+                status_russian = {
+                    "new": "Новое",
+                    "in_progress": "В работе",
+                    "court": "В суде",
+                    "completed": "Завершено",
+                }.get(case['status'], case['status'])
+                st.write(f"**Статус:** {status_russian}")
+
                 debt = case.get("total_debt")
-                st.write(f"**Долг:** {debt:,.0f} ₽" if debt else "**Долг:** не указан")
+                st.write(f"**Долг:** {debt:,.0f} руб." if debt else "**Долг:** не указан")
                 st.write(f"**Кредиторов:** {case.get('creditors_count', 0)}")
 
             with col2:
-                created = case["created_at"][:10] if "created_at" in case else "—"
+                # Format date in Russian format (DD.MM.YYYY)
+                if "created_at" in case and case["created_at"]:
+                    try:
+                        created_date = datetime.fromisoformat(case["created_at"].replace('Z', '+00:00'))
+                        created = created_date.strftime("%d.%m.%Y")
+                    except:
+                        created = case["created_at"][:10]
+                else:
+                    created = "—"
                 st.write(f"**Создано:** {created}")
                 st.write(f"**ID:** {case['id']}")
 
@@ -88,11 +104,11 @@ if cases:
 
     with col1:
         total_debt = sum(float(c.get("total_debt", 0) or 0) for c in cases)
-        st.metric("Общая сумма долга", f"{total_debt:,.0f} ₽")
+        st.metric("Общая сумма долга", f"{total_debt:,.0f} руб.")
 
     with col2:
         avg_debt = total_debt / len(cases) if cases else 0
-        st.metric("Средний долг", f"{avg_debt:,.0f} ₽")
+        st.metric("Средний долг", f"{avg_debt:,.0f} руб.")
 
     with col3:
         total_creditors = sum(c.get("creditors_count", 0) for c in cases)
