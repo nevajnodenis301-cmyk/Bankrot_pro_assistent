@@ -1,0 +1,16 @@
+from fastapi import FastAPI
+from datetime import datetime
+
+app = FastAPI(title="bankrot_bot web")
+
+@app.get("/healthz")
+def healthz():
+    return {
+        "status": "ok",
+        "service": "bankrot_bot",
+        "ts": datetime.utcnow().isoformat()
+    }
+
+@app.get("/")
+def root():
+    return {"service": "bankrot_bot", "status": "running"}

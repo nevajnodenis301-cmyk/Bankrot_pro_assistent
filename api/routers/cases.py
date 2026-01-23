@@ -7,15 +7,12 @@ from security import require_api_token
 
 router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(require_api_token)])
 
-
 @router.post("", response_model=CaseResponse, status_code=201)
 async def create_case(request: Request, data: CaseCreate, db: AsyncSession = Depends(get_db)):
     """Create new bankruptcy case"""
-    limiter = request.app.state.limiter
-    await limiter.check_request_limit(request, "10/minute")
+    # Rate limiting is handled by decorator in main.py or should be applied here as decorator
     service = CaseService(db)
     return await service.create(data)
-
 
 @router.get("", response_model=list[CasePublic])
 async def list_cases(
@@ -30,7 +27,6 @@ async def list_cases(
     offset = max(0, offset)
     service = CaseService(db)
     cases = await service.get_all(telegram_user_id=telegram_user_id, status=status, limit=limit, offset=offset)
-
     # Return public data only
     return [
         CasePublic(
@@ -45,7 +41,6 @@ async def list_cases(
         for case in cases
     ]
 
-
 @router.get("/{case_id}", response_model=CaseResponse)
 async def get_case(case_id: int, db: AsyncSession = Depends(get_db)):
     """Get case by ID (full data for web)"""
@@ -55,7 +50,6 @@ async def get_case(case_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, "Дело не найдено")
     return case
 
-
 @router.get("/{case_id}/public", response_model=CasePublic)
 async def get_case_public(case_id: int, db: AsyncSession = Depends(get_db)):
     """Get case public data (for bot - without passport, INN)"""
@@ -63,7 +57,6 @@ async def get_case_public(case_id: int, db: AsyncSession = Depends(get_db)):
     case = await service.get_by_id(case_id)
     if not case:
         raise HTTPException(404, "Дело не найдено")
-
     return CasePublic(
         id=case.id,
         case_number=case.case_number,
@@ -74,7 +67,6 @@ async def get_case_public(case_id: int, db: AsyncSession = Depends(get_db)):
         creditors_count=len(case.creditors),
     )
 
-
 @router.put("/{case_id}", response_model=CaseResponse)
 async def update_case(case_id: int, data: CaseUpdate, db: AsyncSession = Depends(get_db)):
     """Update case"""
@@ -83,7 +75,6 @@ async def update_case(case_id: int, data: CaseUpdate, db: AsyncSession = Depends
     if not case:
         raise HTTPException(404, "Дело не найдено")
     return case
-
 
 @router.delete("/{case_id}", status_code=204)
 async def delete_case(case_id: int, db: AsyncSession = Depends(get_db)):

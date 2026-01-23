@@ -1,0 +1,14 @@
+services:
+  bankrot_bot:
+    build: .
+    container_name: bankrot_bot
+    env_file:
+      - .env
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      # SQLite + generated files должны переживать пересоздание контейнера
+      - ./bankrot.db:/app/bankrot.db
+      - ./generated:/app/generated
+      - ./logs:/app/logs
+      - ./templates:/app/templates:ro
