@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from services.ai_service import get_ai_provider
 from security import require_api_token
@@ -15,8 +15,11 @@ class AIAnswer(BaseModel):
 
 
 @router.post("/ask", response_model=AIAnswer)
-async def ask_ai(data: AIQuestion):
+async def ask_ai(request: Request, data: AIQuestion):
     """Ask AI assistant about bankruptcy law (127-FZ)"""
+    limiter = request.app.state.limiter
+    await limiter.check_request_limit(request, "3/minute")
+
     if not data.question.strip():
         raise HTTPException(400, "Вопрос не может быть пустым")
 

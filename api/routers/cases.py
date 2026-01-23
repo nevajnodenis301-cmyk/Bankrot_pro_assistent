@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
@@ -9,8 +9,10 @@ router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(re
 
 
 @router.post("", response_model=CaseResponse, status_code=201)
-async def create_case(data: CaseCreate, db: AsyncSession = Depends(get_db)):
+async def create_case(request: Request, data: CaseCreate, db: AsyncSession = Depends(get_db)):
     """Create new bankruptcy case"""
+    limiter = request.app.state.limiter
+    await limiter.check_request_limit(request, "10/minute")
     service = CaseService(db)
     return await service.create(data)
 

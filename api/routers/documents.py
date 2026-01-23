@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from io import BytesIO
@@ -11,8 +11,10 @@ router = APIRouter(prefix="/api/documents", tags=["documents"], dependencies=[De
 
 
 @router.get("/{case_id}/bankruptcy-application")
-async def get_bankruptcy_application(case_id: int, db: AsyncSession = Depends(get_db)):
+async def get_bankruptcy_application(request: Request, case_id: int, db: AsyncSession = Depends(get_db)):
     """Generate bankruptcy application document"""
+    limiter = request.app.state.limiter
+    await limiter.check_request_limit(request, "5/minute")
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
@@ -53,8 +55,10 @@ async def get_bankruptcy_application(case_id: int, db: AsyncSession = Depends(ge
 
 
 @router.get("/cases/{case_id}/document/petition")
-async def get_bankruptcy_petition(case_id: int, db: AsyncSession = Depends(get_db)):
+async def get_bankruptcy_petition(request: Request, case_id: int, db: AsyncSession = Depends(get_db)):
     """Generate bankruptcy petition document with full Russian formatting"""
+    limiter = request.app.state.limiter
+    await limiter.check_request_limit(request, "5/minute")
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
