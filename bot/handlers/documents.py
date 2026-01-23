@@ -3,6 +3,15 @@ from aiogram.types import Message, CallbackQuery, FSInputFile, BufferedInputFile
 from aiogram.filters import Command
 import httpx
 from config import settings
+from exceptions import (
+    BotException,
+    APIError,
+    APITimeoutError,
+    DocumentGenerationError,
+)
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -41,14 +50,44 @@ async def generate_document(callback: CallbackQuery):
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.get(f"{settings.API_BASE_URL}/api/documents/{case_id}/bankruptcy-application")
-            response.raise_for_status()
 
-            # Send document
-            document = BufferedInputFile(response.content, filename=f"bankruptcy_{case_id}.docx")
-            await callback.message.answer_document(
-                document=document, caption="📄 Заявление о банкротстве сформировано"
-            )
+            if response.status_code == 200:
+                # Send document
+                document = BufferedInputFile(response.content, filename=f"bankruptcy_{case_id}.docx")
+                await callback.message.answer_document(
+                    document=document, caption="📄 Заявление о банкротстве сформировано"
+                )
+            elif response.status_code == 404:
+                await callback.message.answer(
+                    "❌ Дело не найдено. Проверьте номер дела."
+                )
+            elif response.status_code >= 500:
+                raise APIError(f"Server error: {response.status_code}", status_code=response.status_code)
+            else:
+                raise DocumentGenerationError(f"Failed to generate document: {response.status_code}")
+
+    except httpx.TimeoutException:
+        logger.error(f"Timeout generating document for case {case_id}")
+        await callback.message.answer(
+            "❌ Сервер не отвечает. Генерация документа занимает больше времени, чем ожидалось.\n"
+            "Попробуйте позже или обратитесь к администратору."
+        )
+    except httpx.NetworkError as e:
+        logger.error(f"Network error generating document for case {case_id}: {e}")
+        await callback.message.answer(
+            "❌ Ошибка сети. Проверьте подключение к интернету и попробуйте позже."
+        )
+    except DocumentGenerationError as e:
+        logger.error(f"Document generation error for case {case_id}: {e}")
+        await callback.message.answer(f"❌ {e.user_message}")
+    except BotException as e:
+        logger.error(f"Bot exception generating document for case {case_id}: {e}")
+        await callback.message.answer(f"❌ {e.user_message}")
     except Exception as e:
-        await callback.message.answer(f"❌ Ошибка при генерации документа: {str(e)}")
+        logger.exception(f"Unexpected error generating document for case {case_id}: {e}")
+        await callback.message.answer(
+            "❌ Произошла непредвиденная ошибка при генерации документа.\n"
+            "Попробуйте позже или обратитесь к администратору."
+        )
 
     await callback.answer()
