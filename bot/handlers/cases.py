@@ -6,6 +6,16 @@ from states.case_states import CaseCreation
 from services.api_client import APIClient
 from keyboards.inline import get_yes_no_keyboard, get_cases_keyboard, get_case_keyboard
 from keyboards.reply import get_navigation_keyboard, get_main_keyboard
+from exceptions import (
+    BotException,
+    APIError,
+    APITimeoutError,
+    AuthenticationError,
+    CaseNotFoundError,
+)
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 api = APIClient()
@@ -256,9 +266,18 @@ async def finish_creditors(callback: CallbackQuery, state: FSMContext):
             parse_mode="HTML",
             reply_markup=get_main_keyboard()
         )
-    except Exception as e:
+    except BotException as e:
+        logger.error(f"Bot exception creating case: {e}")
         await callback.message.answer(
-            f"❌ Ошибка при создании дела: {str(e)}",
+            f"❌ {e.user_message}",
+            reply_markup=get_main_keyboard()
+        )
+        await state.clear()
+    except Exception as e:
+        logger.exception(f"Unexpected error creating case: {e}")
+        await callback.message.answer(
+            "❌ Произошла непредвиденная ошибка при создании дела. "
+            "Попробуйте позже или обратитесь к администратору.",
             reply_markup=get_main_keyboard()
         )
         await state.clear()
@@ -287,8 +306,15 @@ async def cmd_list_cases(message: Message):
             text += f"{status_emoji} <code>{case['case_number']}</code> — {case['full_name']}\n"
 
         await message.answer(text, parse_mode="HTML", reply_markup=get_cases_keyboard(cases))
+    except BotException as e:
+        logger.error(f"Bot exception getting cases list: {e}")
+        await message.answer(f"❌ {e.user_message}")
     except Exception as e:
-        await message.answer(f"❌ Ошибка при получении списка дел: {str(e)}")
+        logger.exception(f"Unexpected error getting cases list: {e}")
+        await message.answer(
+            "❌ Произошла непредвиденная ошибка при получении списка дел. "
+            "Попробуйте позже или обратитесь к администратору."
+        )
 
 
 @router.callback_query(F.data.startswith("case_"))
@@ -314,8 +340,18 @@ async def show_case_details(callback: CallbackQuery):
         )
 
         await callback.message.edit_text(text, parse_mode="HTML", reply_markup=get_case_keyboard(case_id))
+    except CaseNotFoundError as e:
+        logger.warning(f"Case not found: {case_id}")
+        await callback.answer(e.user_message, show_alert=True)
+    except BotException as e:
+        logger.error(f"Bot exception getting case details: {e}")
+        await callback.answer(f"❌ {e.user_message}", show_alert=True)
     except Exception as e:
-        await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
+        logger.exception(f"Unexpected error getting case details: {e}")
+        await callback.answer(
+            "❌ Произошла непредвиденная ошибка. Попробуйте позже.",
+            show_alert=True
+        )
 
 
 @router.callback_query(F.data == "back_to_list")
@@ -334,5 +370,12 @@ async def back_to_list(callback: CallbackQuery):
             text += f"{status_emoji} <code>{case['case_number']}</code> — {case['full_name']}\n"
 
         await callback.message.edit_text(text, parse_mode="HTML", reply_markup=get_cases_keyboard(cases))
+    except BotException as e:
+        logger.error(f"Bot exception getting cases list: {e}")
+        await callback.answer(f"❌ {e.user_message}", show_alert=True)
     except Exception as e:
-        await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
+        logger.exception(f"Unexpected error getting cases list: {e}")
+        await callback.answer(
+            "❌ Произошла непредвиденная ошибка. Попробуйте позже.",
+            show_alert=True
+        )

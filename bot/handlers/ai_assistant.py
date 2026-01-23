@@ -2,6 +2,10 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 from services.api_client import APIClient
+from exceptions import BotException, AIServiceError
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 api = APIClient()
@@ -30,10 +34,19 @@ async def cmd_ai(message: Message):
     try:
         answer = await api.ask_ai(question)
         await wait_msg.edit_text(f"💡 <b>Ответ AI-ассистента:</b>\n\n{answer}", parse_mode="HTML")
+    except AIServiceError as e:
+        logger.error(f"AI service error: {e}")
+        await wait_msg.edit_text(f"❌ {e.user_message}")
+    except BotException as e:
+        logger.error(f"Bot exception asking AI: {e}")
+        await wait_msg.edit_text(f"❌ {e.user_message}")
     except Exception as e:
+        logger.exception(f"Unexpected error asking AI: {e}")
         await wait_msg.edit_text(
-            "❌ Ошибка при обращении к AI. Попробуйте позже.\n\n"
+            "❌ Произошла непредвиденная ошибка при обращении к AI-ассистенту.\n\n"
             "Возможные причины:\n"
-            "• AI сервис временно недоступен\n"
-            "• Не настроен API ключ"
+            "• AI-сервис временно недоступен\n"
+            "• Не настроен API ключ\n"
+            "• Проблема с подключением к серверу\n\n"
+            "Попробуйте позже или обратитесь к администратору."
         )
