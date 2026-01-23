@@ -1,6 +1,6 @@
 from datetime import datetime
+import sqlalchemy as sa
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from models.case import Case, Creditor
@@ -13,41 +13,28 @@ class CaseService:
 
     async def create(self, data: CaseCreate) -> Case:
         """Create new bankruptcy case"""
-        # Generate case number with optimistic retry to avoid collisions under concurrency
-        retries = 3
-        for attempt in range(retries):
-            year = datetime.now().year
-            result = await self.db.execute(
-                select(Case)
-                .where(Case.case_number.like(f"BP-{year}-%"))
-                .order_by(Case.id.desc())
-                .limit(1)
-            )
-            last_case = result.scalar_one_or_none()
+        # Generate case number using database sequence for atomic uniqueness
+        year = datetime.now().year
 
-            if last_case:
-                last_num = int(last_case.case_number.split("-")[-1])
-                case_number = f"BP-{year}-{last_num + 1:04d}"
-            else:
-                case_number = f"BP-{year}-0001"
+        # Get next sequence value atomically
+        result = await self.db.execute(
+            select(sa.text("nextval('case_number_seq')"))
+        )
+        seq_num = result.scalar()
 
-            case = Case(
-                case_number=case_number,
-                full_name=data.full_name,
-                total_debt=data.total_debt,
-                telegram_user_id=data.telegram_user_id,
-            )
+        case_number = f"BP-{year}-{seq_num:04d}"
 
-            self.db.add(case)
-            try:
-                await self.db.commit()
-                await self.db.refresh(case)
-                return await self.get_by_id(case.id)
-            except IntegrityError:
-                await self.db.rollback()
-                if attempt == retries - 1:
-                    raise
-                # retry on collision
+        case = Case(
+            case_number=case_number,
+            full_name=data.full_name,
+            total_debt=data.total_debt,
+            telegram_user_id=data.telegram_user_id,
+        )
+
+        self.db.add(case)
+        await self.db.commit()
+        await self.db.refresh(case)
+        return await self.get_by_id(case.id)
 
     async def get_all(
         self, telegram_user_id: int | None = None, status: str | None = None, limit: int = 50, offset: int = 0
