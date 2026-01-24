@@ -18,7 +18,6 @@ class AIAnswer(BaseModel):
 async def ask_ai(request: Request, data: AIQuestion):
     """Ask AI assistant about bankruptcy law (127-FZ)"""
     limiter = request.app.state.limiter
-    await limiter.check_request_limit(request, "3/minute")
 
     if not data.question.strip():
         raise HTTPException(400, "Вопрос не может быть пустым")

@@ -74,7 +74,7 @@ else:
                 st.write(f"**Статус:** {status_russian}")
 
                 debt = case.get("total_debt")
-                st.write(f"**Долг:** {debt:,.0f} руб." if debt else "**Долг:** не указан")
+                st.write(f"**Долг:** {float(debt or 0):,.0f} руб." if debt else "**Долг:** не указан")
                 st.write(f"**Кредиторов:** {case.get('creditors_count', 0)}")
 
             with col2:

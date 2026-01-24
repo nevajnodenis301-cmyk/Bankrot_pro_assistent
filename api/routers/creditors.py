@@ -24,7 +24,6 @@ async def get_creditors(request: Request, case_id: int, db: AsyncSession = Depen
 async def add_creditor(request: Request, case_id: int, data: CreditorCreate, db: AsyncSession = Depends(get_db)):
     """Add creditor to case"""
     limiter = request.app.state.limiter
-    await limiter.check_request_limit(request, "20/minute")
     service = CaseService(db)
     creditor = await service.add_creditor(case_id, data.model_dump())
     if not creditor:

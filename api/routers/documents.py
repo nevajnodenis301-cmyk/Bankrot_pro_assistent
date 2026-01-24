@@ -14,7 +14,6 @@ router = APIRouter(prefix="/api/documents", tags=["documents"], dependencies=[De
 async def get_bankruptcy_application(request: Request, case_id: int, db: AsyncSession = Depends(get_db)):
     """Generate bankruptcy application document"""
     limiter = request.app.state.limiter
-    await limiter.check_request_limit(request, "5/minute")
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
@@ -58,7 +57,6 @@ async def get_bankruptcy_application(request: Request, case_id: int, db: AsyncSe
 async def get_bankruptcy_petition(request: Request, case_id: int, db: AsyncSession = Depends(get_db)):
     """Generate bankruptcy petition document with full Russian formatting"""
     limiter = request.app.state.limiter
-    await limiter.check_request_limit(request, "5/minute")
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
