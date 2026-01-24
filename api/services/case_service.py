@@ -101,3 +101,30 @@ class CaseService:
         await self.db.commit()
         await self.db.refresh(creditor)
         return creditor
+
+    async def get_creditors(self, case_id: int) -> list[Creditor] | None:
+        """Get all creditors for a case"""
+        case = await self.get_by_id(case_id)
+        if not case:
+            return None
+        return case.creditors
+
+    async def delete_creditor(self, creditor_id: int) -> bool:
+        """Delete a creditor by ID"""
+        result = await self.db.execute(
+            select(Creditor).where(Creditor.id == creditor_id)
+        )
+        creditor = result.scalar_one_or_none()
+        if not creditor:
+            return False
+
+        await self.db.delete(creditor)
+        await self.db.commit()
+        return True
+
+    async def get_creditor_by_id(self, creditor_id: int) -> Creditor | None:
+        """Get a single creditor by ID"""
+        result = await self.db.execute(
+            select(Creditor).where(Creditor.id == creditor_id)
+        )
+        return result.scalar_one_or_none()
