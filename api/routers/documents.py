@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from io import BytesIO
 from database import get_db
 from services.case_service import CaseService
-from services.document_service import generate_bankruptcy_application, generate_bankruptcy_petition
+from services.document_service import generate_bankruptcy_petition
 from security import require_api_token
 
 router = APIRouter(prefix="/api/documents", tags=["documents"], dependencies=[Depends(require_api_token)])
@@ -40,7 +40,7 @@ async def get_bankruptcy_application(request: Request, case_id: int, db: AsyncSe
     }
 
     try:
-        doc_bytes = generate_bankruptcy_application(case_data)
+        doc_bytes = generate_bankruptcy_petition(case_data)
     except FileNotFoundError:
         raise HTTPException(500, "Шаблон документа не найден")
     except Exception as e:
