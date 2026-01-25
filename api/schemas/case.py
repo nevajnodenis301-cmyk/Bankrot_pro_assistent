@@ -219,8 +219,19 @@ class CaseResponse(BaseModel):
     court_address: str | None
     gender: str | None
     marital_status: str | None
+    spouse_name: str | None
+    marriage_certificate_number: str | None
+    marriage_certificate_date: date | None
+    divorce_certificate_number: str | None
+    divorce_certificate_date: date | None
+    is_employed: bool | None
+    is_self_employed: bool | None
+    employer_name: str | None
+    has_real_estate: bool | None
     sro_name: str | None
     sro_address: str | None
+    restructuring_duration: str | None
+    insolvency_grounds: str | None
     inn: str | None
     snils: str | None
     birth_date: date | None
@@ -232,4 +243,81 @@ class CaseResponse(BaseModel):
     notes: str | None
     creditors: list[CreditorResponse] = []
     debts: list[DebtResponse] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== CHILDREN ====================
+
+class ChildCreate(BaseModel):
+    child_name: str
+    child_birth_date: date
+    child_has_certificate: bool = False
+    child_certificate_number: str | None = None
+    child_certificate_date: date | None = None
+    child_has_passport: bool = False
+    child_passport_series: str | None = None
+    child_passport_number: str | None = None
+    child_passport_issued_by: str | None = None
+    child_passport_date: date | None = None
+    child_passport_code: str | None = None
+
+
+class ChildResponse(ChildCreate):
+    id: int
+    case_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== INCOME ====================
+
+class IncomeCreate(BaseModel):
+    year: str
+    amount_rubles: int
+    amount_kopecks: int = 0
+    certificate_number: str | None = None
+
+
+class IncomeResponse(IncomeCreate):
+    id: int
+    case_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== PROPERTY ====================
+
+class PropertyCreate(BaseModel):
+    property_type: str  # "vehicle" or "real_estate"
+    description: str | None = None
+    vehicle_make: str | None = None
+    vehicle_model: str | None = None
+    vehicle_year: int | None = None
+    vehicle_vin: str | None = None
+    vehicle_color: str | None = None
+    is_pledged: bool = False
+    pledge_creditor: str | None = None
+    pledge_document: str | None = None
+
+
+class PropertyResponse(PropertyCreate):
+    id: int
+    case_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==================== TRANSACTIONS ====================
+
+class TransactionCreate(BaseModel):
+    transaction_type: str  # real_estate, securities, llc_shares, vehicles
+    description: str
+    transaction_date: date | None = None
+    amount: Decimal | None = None
+
+
+class TransactionResponse(TransactionCreate):
+    id: int
+    case_id: int
+
     model_config = ConfigDict(from_attributes=True)

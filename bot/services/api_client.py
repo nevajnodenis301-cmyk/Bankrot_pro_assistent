@@ -400,6 +400,384 @@ class APIClient:
             logger.error(f"Network error deleting debt {debt_id}: {e}")
             raise APIError(f"Network error: {str(e)}")
 
+    # ==================== GROUP 1: FAMILY DATA ====================
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def update_case_family_data(self, case_id: int, family_data: dict) -> dict:
+        """Update family data (marital status, spouse)"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.patch(
+                    f"{self.base_url}/api/cases/{case_id}/family-data",
+                    json=family_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout updating family data for case {case_id}")
+            raise APITimeoutError("Timeout updating family data")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error updating family data: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def add_child(self, case_id: int, child_data: dict) -> dict:
+        """Add child to case"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/children/{case_id}",
+                    json=child_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error("Timeout adding child")
+            raise APITimeoutError("Timeout adding child")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error adding child: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_children(self, case_id: int) -> list:
+        """Get children for case"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/children/{case_id}",
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout getting children for case {case_id}")
+            raise APITimeoutError("Timeout getting children")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting children: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def delete_child(self, child_id: int) -> None:
+        """Delete child"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(
+                    f"{self.base_url}/api/children/{child_id}",
+                    headers=self._headers
+                )
+                if response.status_code != 204:
+                    raise APIError(f"Delete failed: {response.status_code}")
+        except httpx.TimeoutException:
+            logger.error(f"Timeout deleting child {child_id}")
+            raise APITimeoutError(f"Timeout deleting child {child_id}")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error deleting child: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    # ==================== GROUP 1: EMPLOYMENT DATA ====================
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def update_case_employment_data(self, case_id: int, employment_data: dict) -> dict:
+        """Update employment data"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.patch(
+                    f"{self.base_url}/api/cases/{case_id}/employment-data",
+                    json=employment_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout updating employment data for case {case_id}")
+            raise APITimeoutError("Timeout updating employment data")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error updating employment data: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def add_income(self, case_id: int, income_data: dict) -> dict:
+        """Add income record"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/income/{case_id}",
+                    json=income_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error("Timeout adding income")
+            raise APITimeoutError("Timeout adding income")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error adding income: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_income(self, case_id: int) -> list:
+        """Get income records"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/income/{case_id}",
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout getting income for case {case_id}")
+            raise APITimeoutError("Timeout getting income")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting income: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def delete_income(self, income_id: int) -> None:
+        """Delete income record"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(
+                    f"{self.base_url}/api/income/{income_id}",
+                    headers=self._headers
+                )
+                if response.status_code != 204:
+                    raise APIError(f"Delete failed: {response.status_code}")
+        except httpx.TimeoutException:
+            logger.error(f"Timeout deleting income {income_id}")
+            raise APITimeoutError(f"Timeout deleting income {income_id}")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error deleting income: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    # ==================== GROUP 2: PROPERTY DATA ====================
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def toggle_real_estate(self, case_id: int) -> dict:
+        """Toggle real estate flag"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.patch(
+                    f"{self.base_url}/api/cases/{case_id}/toggle-real-estate",
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout toggling real estate for case {case_id}")
+            raise APITimeoutError("Timeout toggling real estate")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error toggling real estate: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def add_property(self, case_id: int, property_data: dict) -> dict:
+        """Add property"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/properties/{case_id}",
+                    json=property_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error("Timeout adding property")
+            raise APITimeoutError("Timeout adding property")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error adding property: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_properties(self, case_id: int) -> list:
+        """Get properties"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/properties/{case_id}",
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout getting properties for case {case_id}")
+            raise APITimeoutError("Timeout getting properties")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting properties: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def delete_property(self, property_id: int) -> None:
+        """Delete property"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(
+                    f"{self.base_url}/api/properties/{property_id}",
+                    headers=self._headers
+                )
+                if response.status_code != 204:
+                    raise APIError(f"Delete failed: {response.status_code}")
+        except httpx.TimeoutException:
+            logger.error(f"Timeout deleting property {property_id}")
+            raise APITimeoutError(f"Timeout deleting property {property_id}")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error deleting property: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    # ==================== GROUP 2: TRANSACTIONS ====================
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def add_transaction(self, case_id: int, transaction_data: dict) -> dict:
+        """Add transaction"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/transactions/{case_id}",
+                    json=transaction_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error("Timeout adding transaction")
+            raise APITimeoutError("Timeout adding transaction")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error adding transaction: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_transactions(self, case_id: int, transaction_type: str = None) -> list:
+        """Get transactions, optionally by type"""
+        try:
+            params = {}
+            if transaction_type:
+                params['transaction_type'] = transaction_type
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/transactions/{case_id}",
+                    params=params,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout getting transactions for case {case_id}")
+            raise APITimeoutError("Timeout getting transactions")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting transactions: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def delete_transaction(self, transaction_id: int) -> None:
+        """Delete transaction"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(
+                    f"{self.base_url}/api/transactions/{transaction_id}",
+                    headers=self._headers
+                )
+                if response.status_code != 204:
+                    raise APIError(f"Delete failed: {response.status_code}")
+        except httpx.TimeoutException:
+            logger.error(f"Timeout deleting transaction {transaction_id}")
+            raise APITimeoutError(f"Timeout deleting transaction {transaction_id}")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error deleting transaction: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    # ==================== GROUP 3: COURT DATA ====================
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def update_case_court_data(self, case_id: int, court_data: dict) -> dict:
+        """Update court and SRO data"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.patch(
+                    f"{self.base_url}/api/cases/{case_id}/court-data",
+                    json=court_data,
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout updating court data for case {case_id}")
+            raise APITimeoutError("Timeout updating court data")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error updating court data: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
     @property
     def _headers(self) -> dict:
         """Attach API token when configured."""

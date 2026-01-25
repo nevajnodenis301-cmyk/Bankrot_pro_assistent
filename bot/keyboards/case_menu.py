@@ -234,3 +234,445 @@ def get_confirm_delete_keyboard(item_type: str, item_id: int, case_id: int) -> I
         [InlineKeyboardButton(text="❌ Отмена", callback_data=f"{item_type}s:{case_id}:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+# ==================== GROUP 1: FAMILY KEYBOARDS ====================
+
+def get_family_menu(case_id: int, case_number: str, case_data: dict) -> InlineKeyboardMarkup:
+    """Family data menu showing current status"""
+    marital_status = case_data.get('marital_status')
+    children = case_data.get('children', [])
+    children_count = len(children) if isinstance(children, list) else 0
+
+    status_text = {
+        "married": "В браке",
+        "divorced": "Разведен(а)",
+        "single": "Не женат/не замужем",
+        "never_married": "Никогда не состоял(а) в браке"
+    }.get(marital_status, "Не указано")
+
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"💍 Семейное положение: {status_text}",
+            callback_data=f"family:{case_id}:edit_status"
+        )],
+    ]
+
+    # Show spouse option if married or divorced
+    if marital_status in ["married", "divorced"]:
+        spouse_name = case_data.get('spouse_name', 'не указано')
+        spouse_display = spouse_name[:20] if spouse_name else 'не указано'
+        keyboard.append([InlineKeyboardButton(
+            text=f"👥 Супруг(а): {spouse_display}",
+            callback_data=f"family:{case_id}:spouse"
+        )])
+
+    keyboard.extend([
+        [InlineKeyboardButton(
+            text=f"👶 Дети ({children_count})",
+            callback_data=f"family:{case_id}:children"
+        )],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"case_{case_id}")]
+    ])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_marital_status_keyboard(case_id: int) -> InlineKeyboardMarkup:
+    """Select marital status"""
+    keyboard = [
+        [InlineKeyboardButton(text="💑 В браке", callback_data=f"family:status:married:{case_id}")],
+        [InlineKeyboardButton(text="💔 Разведен(а)", callback_data=f"family:status:divorced:{case_id}")],
+        [InlineKeyboardButton(text="🙂 Не женат/не замужем", callback_data=f"family:status:single:{case_id}")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data=f"family:{case_id}:menu")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_children_menu(case_id: int, case_number: str, children: list) -> InlineKeyboardMarkup:
+    """Children management menu"""
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"➕ Добавить ребенка (всего: {len(children)})",
+            callback_data=f"children:{case_id}:add"
+        )]
+    ]
+
+    if children:
+        keyboard.extend([
+            [InlineKeyboardButton(text="📋 Список детей", callback_data=f"children:{case_id}:list")],
+            [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"children:{case_id}:delete")]
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data=f"family:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_child_document_type_keyboard(case_id: int) -> InlineKeyboardMarkup:
+    """Choose document type for child"""
+    keyboard = [
+        [InlineKeyboardButton(
+            text="📄 Свидетельство о рождении (до 14 лет)",
+            callback_data=f"child_doc:{case_id}:birth_certificate"
+        )],
+        [InlineKeyboardButton(
+            text="🛂 Паспорт РФ (14+ лет)",
+            callback_data=f"child_doc:{case_id}:passport"
+        )],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data=f"children:{case_id}:menu")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_children_list_keyboard(children: list, case_id: int) -> InlineKeyboardMarkup:
+    """List children for deletion"""
+    keyboard = []
+
+    for child in children:
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"🗑 {child['child_name'][:30]}",
+                callback_data=f"child:delete:{child['id']}"
+            )
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="❌ Отмена", callback_data=f"children:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_back_to_family_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to family menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"family:{case_id}:menu")]
+    ])
+
+
+def get_back_to_children_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to children menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"children:{case_id}:menu")]
+    ])
+
+
+# ==================== GROUP 1: EMPLOYMENT KEYBOARDS ====================
+
+def get_employment_menu(case_id: int, case_number: str, case_data: dict) -> InlineKeyboardMarkup:
+    """Employment data menu"""
+    is_employed = case_data.get('is_employed', False)
+    is_self_employed = case_data.get('is_self_employed', False)
+    income_records = case_data.get('income_records', [])
+    income_count = len(income_records) if isinstance(income_records, list) else 0
+
+    status_text = "Не указано"
+    if is_employed:
+        status_text = "Трудоустроен"
+        employer = case_data.get('employer_name', '')
+        if employer:
+            status_text += f" ({employer[:20]})"
+    elif is_self_employed:
+        status_text = "Самозанятый"
+    elif is_employed is False and is_self_employed is False:
+        status_text = "Безработный"
+
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"💼 Статус: {status_text}",
+            callback_data=f"employment:{case_id}:status"
+        )],
+    ]
+
+    if is_self_employed:
+        keyboard.append([InlineKeyboardButton(
+            text=f"💰 Доходы ({income_count} год(а))",
+            callback_data=f"employment:{case_id}:income"
+        )])
+
+    keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data=f"case_{case_id}")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_employment_status_keyboard(case_id: int) -> InlineKeyboardMarkup:
+    """Select employment status"""
+    keyboard = [
+        [InlineKeyboardButton(text="💼 Трудоустроен", callback_data=f"employ:status:employed:{case_id}")],
+        [InlineKeyboardButton(text="👨‍💼 Самозанятый", callback_data=f"employ:status:self_employed:{case_id}")],
+        [InlineKeyboardButton(text="🚫 Безработный", callback_data=f"employ:status:unemployed:{case_id}")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data=f"employment:{case_id}:menu")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_income_menu(case_id: int, income_records: list) -> InlineKeyboardMarkup:
+    """Income records menu"""
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"➕ Добавить доход (всего: {len(income_records)})",
+            callback_data=f"income:{case_id}:add"
+        )]
+    ]
+
+    if income_records:
+        keyboard.extend([
+            [InlineKeyboardButton(text="📋 Список доходов", callback_data=f"income:{case_id}:list")],
+            [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"income:{case_id}:delete")]
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data=f"employment:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_income_list_keyboard(income_records: list, case_id: int) -> InlineKeyboardMarkup:
+    """List income records for deletion"""
+    keyboard = []
+
+    for income in income_records:
+        amount = income.get('amount_rubles', 0)
+        year = income.get('year', '')
+        amount_formatted = f"{amount:,}".replace(",", " ")
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"🗑 {year}: {amount_formatted} ₽",
+                callback_data=f"income:delete:{income['id']}"
+            )
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="❌ Отмена", callback_data=f"income:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_back_to_employment_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to employment menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"employment:{case_id}:menu")]
+    ])
+
+
+def get_back_to_income_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to income menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"income:{case_id}:menu")]
+    ])
+
+
+# ==================== GROUP 2: PROPERTY KEYBOARDS ====================
+
+def get_property_menu(case_id: int, case_number: str, case_data: dict) -> InlineKeyboardMarkup:
+    """Property management menu"""
+    has_real_estate = case_data.get('has_real_estate', False)
+    properties = case_data.get('properties', [])
+    vehicles_count = len([p for p in properties if p.get('property_type') == 'vehicle']) if isinstance(properties, list) else 0
+
+    real_estate_text = "✅ Есть" if has_real_estate else "❌ Нет"
+
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"🏠 Недвижимость: {real_estate_text}",
+            callback_data=f"property:{case_id}:toggle_real_estate"
+        )],
+        [InlineKeyboardButton(
+            text=f"🚗 Транспорт ({vehicles_count})",
+            callback_data=f"property:{case_id}:vehicles"
+        )],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"case_{case_id}")]
+    ]
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_vehicles_menu(case_id: int, vehicles: list) -> InlineKeyboardMarkup:
+    """Vehicles management menu"""
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"➕ Добавить транспорт (всего: {len(vehicles)})",
+            callback_data=f"vehicles:{case_id}:add"
+        )]
+    ]
+
+    if vehicles:
+        keyboard.extend([
+            [InlineKeyboardButton(text="📋 Список транспорта", callback_data=f"vehicles:{case_id}:list")],
+            [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"vehicles:{case_id}:delete")]
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data=f"property:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_vehicle_pledged_keyboard(case_id: int) -> InlineKeyboardMarkup:
+    """Ask if vehicle is pledged"""
+    keyboard = [
+        [InlineKeyboardButton(text="✅ Да, в залоге", callback_data=f"vehicle_pledged:{case_id}:yes")],
+        [InlineKeyboardButton(text="❌ Нет, без залога", callback_data=f"vehicle_pledged:{case_id}:no")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_vehicles_list_keyboard(vehicles: list, case_id: int) -> InlineKeyboardMarkup:
+    """List vehicles for deletion"""
+    keyboard = []
+
+    for vehicle in vehicles:
+        make = vehicle.get('vehicle_make', '')
+        model = vehicle.get('vehicle_model', '')
+        year = vehicle.get('vehicle_year', '')
+        text = f"🗑 {make} {model} ({year})"
+        keyboard.append([
+            InlineKeyboardButton(
+                text=text[:40],
+                callback_data=f"vehicle:delete:{vehicle['id']}"
+            )
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="❌ Отмена", callback_data=f"vehicles:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_back_to_property_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to property menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"property:{case_id}:menu")]
+    ])
+
+
+def get_back_to_vehicles_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to vehicles menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"vehicles:{case_id}:menu")]
+    ])
+
+
+# ==================== GROUP 2: TRANSACTIONS KEYBOARDS ====================
+
+def get_transactions_menu(case_id: int, case_number: str, transactions: list) -> InlineKeyboardMarkup:
+    """Transaction history menu"""
+    if not isinstance(transactions, list):
+        transactions = []
+
+    # Count by type
+    real_estate = len([t for t in transactions if t.get('transaction_type') == 'real_estate'])
+    securities = len([t for t in transactions if t.get('transaction_type') == 'securities'])
+    llc_shares = len([t for t in transactions if t.get('transaction_type') == 'llc_shares'])
+    vehicles = len([t for t in transactions if t.get('transaction_type') == 'vehicles'])
+
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"➕ Добавить сделку (всего: {len(transactions)})",
+            callback_data=f"transactions:{case_id}:add"
+        )],
+    ]
+
+    if transactions:
+        keyboard.extend([
+            [InlineKeyboardButton(
+                text=f"🏠 Недвижимость ({real_estate})",
+                callback_data=f"transactions:{case_id}:list:real_estate"
+            )],
+            [InlineKeyboardButton(
+                text=f"📈 Ценные бумаги ({securities})",
+                callback_data=f"transactions:{case_id}:list:securities"
+            )],
+            [InlineKeyboardButton(
+                text=f"🏢 Доли в ООО ({llc_shares})",
+                callback_data=f"transactions:{case_id}:list:llc_shares"
+            )],
+            [InlineKeyboardButton(
+                text=f"🚗 Транспорт ({vehicles})",
+                callback_data=f"transactions:{case_id}:list:vehicles"
+            )],
+            [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"transactions:{case_id}:delete")]
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data=f"case_{case_id}")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_transaction_type_keyboard(case_id: int) -> InlineKeyboardMarkup:
+    """Select transaction type"""
+    keyboard = [
+        [InlineKeyboardButton(text="🏠 Недвижимость", callback_data=f"trans_type:{case_id}:real_estate")],
+        [InlineKeyboardButton(text="📈 Ценные бумаги", callback_data=f"trans_type:{case_id}:securities")],
+        [InlineKeyboardButton(text="🏢 Доли в ООО", callback_data=f"trans_type:{case_id}:llc_shares")],
+        [InlineKeyboardButton(text="🚗 Транспорт", callback_data=f"trans_type:{case_id}:vehicles")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data=f"transactions:{case_id}:menu")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_transactions_list_keyboard(transactions: list, case_id: int) -> InlineKeyboardMarkup:
+    """List transactions for deletion"""
+    keyboard = []
+
+    for trans in transactions:
+        desc = trans.get('description', '')[:20]
+        date_str = trans.get('transaction_date', '')
+        if date_str and isinstance(date_str, str):
+            date_str = date_str[:10]
+        text = f"🗑 {date_str}: {desc}"
+        keyboard.append([
+            InlineKeyboardButton(
+                text=text[:40],
+                callback_data=f"transaction:delete:{trans['id']}"
+            )
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="❌ Отмена", callback_data=f"transactions:{case_id}:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_back_to_transactions_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to transactions menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"transactions:{case_id}:menu")]
+    ])
+
+
+# ==================== GROUP 3: COURT INFO KEYBOARDS ====================
+
+def get_court_info_menu(case_id: int, case_number: str, case_data: dict) -> InlineKeyboardMarkup:
+    """Court and SRO info menu"""
+    court_name = case_data.get('court_name', 'не указан')
+    court_name_display = court_name[:30] if court_name else 'не указан'
+    sro_name = case_data.get('sro_name', 'не указана')
+    sro_name_display = sro_name[:30] if sro_name else 'не указана'
+
+    keyboard = [
+        [InlineKeyboardButton(
+            text=f"⚖️ Суд: {court_name_display}",
+            callback_data=f"court:{case_id}:edit_name"
+        )],
+        [InlineKeyboardButton(
+            text="📍 Адрес суда",
+            callback_data=f"court:{case_id}:edit_address"
+        )],
+        [InlineKeyboardButton(
+            text=f"🏢 СРО: {sro_name_display}",
+            callback_data=f"court:{case_id}:edit_sro"
+        )],
+        [InlineKeyboardButton(
+            text="⏱ Срок реструктуризации",
+            callback_data=f"court:{case_id}:edit_duration"
+        )],
+        [InlineKeyboardButton(
+            text="📋 Основания несостоятельности",
+            callback_data=f"court:{case_id}:edit_grounds"
+        )],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"case_{case_id}")]
+    ]
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_back_to_court_menu(case_id: int) -> InlineKeyboardMarkup:
+    """Simple back button to court menu"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data=f"court:{case_id}:menu")]
+    ])

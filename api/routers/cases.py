@@ -157,3 +157,120 @@ async def update_client_data(
 
     updated_case = await service.update(case_id, case_update)
     return updated_case
+
+
+# ==================== GROUP 1: FAMILY DATA ====================
+
+class FamilyDataUpdate(BaseModel):
+    """Schema for updating family data"""
+    marital_status: str | None = None  # married, divorced, single
+    spouse_name: str | None = None
+    marriage_certificate_number: str | None = None
+    marriage_certificate_date: date | None = None
+    divorce_certificate_number: str | None = None
+    divorce_certificate_date: date | None = None
+
+
+@router.patch("/{case_id}/family-data", response_model=CaseResponse)
+async def update_family_data(
+    case_id: int,
+    data: FamilyDataUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update family data (marital status, spouse info)"""
+    service = CaseService(db)
+    case = await service.get_by_id(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Дело не найдено")
+
+    # Update fields
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(case, field, value)
+
+    await db.commit()
+    await db.refresh(case)
+
+    return case
+
+
+# ==================== GROUP 1: EMPLOYMENT DATA ====================
+
+class EmploymentDataUpdate(BaseModel):
+    """Schema for updating employment data"""
+    is_employed: bool | None = None
+    is_self_employed: bool | None = None
+    employer_name: str | None = None
+
+
+@router.patch("/{case_id}/employment-data", response_model=CaseResponse)
+async def update_employment_data(
+    case_id: int,
+    data: EmploymentDataUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update employment status"""
+    service = CaseService(db)
+    case = await service.get_by_id(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Дело не найдено")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(case, field, value)
+
+    await db.commit()
+    await db.refresh(case)
+
+    return case
+
+
+# ==================== GROUP 2: PROPERTY DATA ====================
+
+@router.patch("/{case_id}/toggle-real-estate", response_model=CaseResponse)
+async def toggle_real_estate(case_id: int, db: AsyncSession = Depends(get_db)):
+    """Toggle has_real_estate flag"""
+    service = CaseService(db)
+    case = await service.get_by_id(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Дело не найдено")
+
+    case.has_real_estate = not case.has_real_estate
+
+    await db.commit()
+    await db.refresh(case)
+
+    return case
+
+
+# ==================== GROUP 3: COURT DATA ====================
+
+class CourtDataUpdate(BaseModel):
+    """Schema for updating court and SRO data"""
+    court_name: str | None = None
+    court_address: str | None = None
+    sro_name: str | None = None
+    restructuring_duration: str | None = None
+    insolvency_grounds: str | None = None
+
+
+@router.patch("/{case_id}/court-data", response_model=CaseResponse)
+async def update_court_data(
+    case_id: int,
+    data: CourtDataUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update court and SRO information"""
+    service = CaseService(db)
+    case = await service.get_by_id(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Дело не найдено")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(case, field, value)
+
+    await db.commit()
+    await db.refresh(case)
+
+    return case
