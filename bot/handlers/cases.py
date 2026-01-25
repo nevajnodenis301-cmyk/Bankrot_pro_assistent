@@ -323,7 +323,7 @@ async def show_case_details(callback: CallbackQuery):
     case_id = int(callback.data.split("_")[1])
 
     try:
-        case = await api.get_case_public(case_id)
+        case = await api.get_case(case_id)
 
         status_emoji = {
             "new": "🆕",
@@ -340,7 +340,7 @@ async def show_case_details(callback: CallbackQuery):
             f"{status_emoji} <b>Дело {case['case_number']}</b>\n\n"
             f"👤 <b>ФИО:</b> {case['full_name']}\n"
             f"💰 <b>Долг:</b> {debt_str}\n"
-            f"🏦 <b>Кредиторов:</b> {case['creditors_count']}\n"
+            f"🏦 <b>Кредиторов:</b> {len(case.get('creditors', []))}\n"
             f"📅 <b>Создано:</b> {case['created_at'][:10]}\n\n"
             f"<i>Выберите раздел для просмотра или редактирования:</i>"
         )
