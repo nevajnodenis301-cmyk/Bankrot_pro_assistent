@@ -134,6 +134,60 @@ class APIClient:
             raise APIError(f"Network error: {str(e)}")
 
     @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_case(self, case_id: int) -> dict:
+        """Get full case data (including confidential info for editing)"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/cases/{case_id}",
+                    headers=self._headers,
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout getting full case {case_id}")
+            raise APITimeoutError(f"Timeout getting case {case_id}")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting full case {case_id}: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def update_case_client_data(self, case_id: int, client_data: dict) -> dict:
+        """
+        Update client personal data for a case.
+
+        Args:
+            case_id: Case ID
+            client_data: Dict with fields like passport_series, passport_number, etc.
+
+        Returns:
+            Updated case data
+        """
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.patch(
+                    f"{self.base_url}/api/cases/{case_id}/client-data",
+                    json=client_data,
+                    headers=self._headers,
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout updating client data for case {case_id}")
+            raise APITimeoutError("Timeout updating client data")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error updating client data for case {case_id}: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
         stop=stop_after_attempt(2),  # Only 2 attempts for AI (it's slower)
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),

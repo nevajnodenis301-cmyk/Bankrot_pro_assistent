@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from states.case_states import CaseCreation
 from services.api_client import APIClient
 from keyboards.inline import get_yes_no_keyboard, get_cases_keyboard, get_case_keyboard
+from keyboards.case_menu import get_case_detail_menu
 from keyboards.reply import get_navigation_keyboard, get_main_keyboard
 from exceptions import (
     BotException,
@@ -331,15 +332,24 @@ async def show_case_details(callback: CallbackQuery):
             "completed": "✅",
         }.get(case["status"], "📁")
 
+        # Format total_debt safely
+        total_debt = case.get("total_debt")
+        debt_str = f"{float(total_debt):,.0f} ₽" if total_debt else "не указан"
+
         text = (
             f"{status_emoji} <b>Дело {case['case_number']}</b>\n\n"
             f"👤 <b>ФИО:</b> {case['full_name']}\n"
-            f"💰 <b>Долг:</b> {case['total_debt']:,.0f} ₽\n"
+            f"💰 <b>Долг:</b> {debt_str}\n"
             f"🏦 <b>Кредиторов:</b> {case['creditors_count']}\n"
-            f"📅 <b>Создано:</b> {case['created_at'][:10]}\n"
+            f"📅 <b>Создано:</b> {case['created_at'][:10]}\n\n"
+            f"<i>Выберите раздел для просмотра или редактирования:</i>"
         )
 
-        await callback.message.edit_text(text, parse_mode="HTML", reply_markup=get_case_keyboard(case_id))
+        await callback.message.edit_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=get_case_detail_menu(case_id, case['case_number'])
+        )
     except CaseNotFoundError as e:
         logger.warning(f"Case not found: {case_id}")
         await callback.answer(e.user_message, show_alert=True)

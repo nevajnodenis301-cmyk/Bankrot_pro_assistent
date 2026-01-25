@@ -1,9 +1,63 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, field_validator
+from datetime import date
 from database import get_db
 from schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
 from services.case_service import CaseService
 from security import require_api_token
+
+
+class ClientDataUpdate(BaseModel):
+    """Schema for updating client personal data"""
+    passport_series: str | None = None
+    passport_number: str | None = None
+    passport_issued_by: str | None = None
+    passport_issued_date: date | None = None
+    passport_code: str | None = None
+    birth_date: date | None = None
+    registration_address: str | None = None
+    phone: str | None = None
+    inn: str | None = None
+    snils: str | None = None
+    gender: str | None = None
+
+    @field_validator("passport_series")
+    @classmethod
+    def validate_passport_series(cls, v: str | None):
+        if v and len(v) != 4:
+            raise ValueError("passport_series must be 4 digits")
+        return v
+
+    @field_validator("passport_number")
+    @classmethod
+    def validate_passport_number(cls, v: str | None):
+        if v and len(v) != 6:
+            raise ValueError("passport_number must be 6 digits")
+        return v
+
+    @field_validator("inn")
+    @classmethod
+    def validate_inn(cls, v: str | None):
+        if v and len(v) not in (10, 12):
+            raise ValueError("inn must be 10 or 12 digits")
+        return v
+
+    @field_validator("snils")
+    @classmethod
+    def validate_snils(cls, v: str | None):
+        if v and len(v.replace("-", "").replace(" ", "")) not in (11, 14):
+            raise ValueError("snils must contain 11 digits")
+        return v
+
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, v: str | None):
+        if v is None or v == "":
+            return None
+        if v not in {"M", "F"}:
+            raise ValueError("gender must be 'M' or 'F'")
+        return v
 
 router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(require_api_token)])
 
@@ -82,3 +136,24 @@ async def delete_case(case_id: int, db: AsyncSession = Depends(get_db)):
     service = CaseService(db)
     if not await service.delete(case_id):
         raise HTTPException(404, "Дело не найдено")
+
+
+@router.patch("/{case_id}/client-data", response_model=CaseResponse)
+async def update_client_data(
+    case_id: int,
+    data: ClientDataUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update client personal data (passport, address, INN, SNILS, etc.)"""
+    service = CaseService(db)
+    case = await service.get_by_id(case_id)
+
+    if not case:
+        raise HTTPException(status_code=404, detail="Дело не найдено")
+
+    # Update only non-None values
+    update_data = data.model_dump(exclude_unset=True)
+    case_update = CaseUpdate(**update_data)
+
+    updated_case = await service.update(case_id, case_update)
+    return updated_case
