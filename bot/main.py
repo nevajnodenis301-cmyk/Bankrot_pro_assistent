@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
 from config import settings
-from handlers import start, cases, documents, ai_assistant, client_data
+from handlers import start, cases, documents, ai_assistant, client_data, creditors, debts
 
 # Configure logging
 logging.basicConfig(
@@ -28,6 +28,8 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(cases.router)
     dp.include_router(client_data.router)
+    dp.include_router(creditors.router)
+    dp.include_router(debts.router)
     dp.include_router(documents.router)
     dp.include_router(ai_assistant.router)
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
-from schemas.case import CreditorCreate, CreditorResponse
+from schemas.case import CreditorCreate, CreditorUpdate, CreditorResponse
 from services.case_service import CaseService
 from security import require_api_token
 
@@ -20,6 +20,18 @@ async def get_creditors(request: Request, case_id: int, db: AsyncSession = Depen
     return creditors
 
 
+@router.get("/single/{creditor_id}", response_model=CreditorResponse)
+async def get_creditor(request: Request, creditor_id: int, db: AsyncSession = Depends(get_db)):
+    """Get a single creditor by ID"""
+    limiter = request.app.state.limiter
+    await limiter.check_request_limit(request, "30/minute")
+    service = CaseService(db)
+    creditor = await service.get_creditor_by_id(creditor_id)
+    if not creditor:
+        raise HTTPException(404, "Кредитор не найден")
+    return creditor
+
+
 @router.post("/{case_id}", response_model=CreditorResponse, status_code=201)
 async def add_creditor(request: Request, case_id: int, data: CreditorCreate, db: AsyncSession = Depends(get_db)):
     """Add creditor to case"""
@@ -28,6 +40,20 @@ async def add_creditor(request: Request, case_id: int, data: CreditorCreate, db:
     creditor = await service.add_creditor(case_id, data.model_dump())
     if not creditor:
         raise HTTPException(404, "Дело не найдено")
+    return creditor
+
+
+@router.put("/{creditor_id}", response_model=CreditorResponse)
+async def update_creditor(
+    request: Request, creditor_id: int, data: CreditorUpdate, db: AsyncSession = Depends(get_db)
+):
+    """Update a creditor"""
+    limiter = request.app.state.limiter
+    await limiter.check_request_limit(request, "30/minute")
+    service = CaseService(db)
+    creditor = await service.update_creditor(creditor_id, data.model_dump(exclude_unset=True))
+    if not creditor:
+        raise HTTPException(404, "Кредитор не найден")
     return creditor
 
 

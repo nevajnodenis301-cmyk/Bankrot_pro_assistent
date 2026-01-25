@@ -4,17 +4,94 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 # === Creditors ===
-class CreditorCreate(BaseModel):
+class CreditorBase(BaseModel):
     name: str
+    ogrn: str | None = None
+    inn: str | None = None
+    address: str | None = None
     creditor_type: str | None = None
     debt_amount: Decimal | None = None
     debt_type: str | None = None
     contract_number: str | None = None
     contract_date: date | None = None
 
+    @field_validator("ogrn")
+    @classmethod
+    def validate_ogrn(cls, v: str | None):
+        if v and (not v.isdigit() or len(v) != 13):
+            raise ValueError("OGRN must be 13 digits")
+        return v
 
-class CreditorResponse(CreditorCreate):
+    @field_validator("inn")
+    @classmethod
+    def validate_inn(cls, v: str | None):
+        if v and (not v.isdigit() or len(v) not in [10, 12]):
+            raise ValueError("INN must be 10 or 12 digits")
+        return v
+
+
+class CreditorCreate(CreditorBase):
+    pass
+
+
+class CreditorUpdate(BaseModel):
+    name: str | None = None
+    ogrn: str | None = None
+    inn: str | None = None
+    address: str | None = None
+    creditor_type: str | None = None
+    debt_amount: Decimal | None = None
+    debt_type: str | None = None
+    contract_number: str | None = None
+    contract_date: date | None = None
+
+    @field_validator("ogrn")
+    @classmethod
+    def validate_ogrn(cls, v: str | None):
+        if v and (not v.isdigit() or len(v) != 13):
+            raise ValueError("OGRN must be 13 digits")
+        return v
+
+    @field_validator("inn")
+    @classmethod
+    def validate_inn(cls, v: str | None):
+        if v and (not v.isdigit() or len(v) not in [10, 12]):
+            raise ValueError("INN must be 10 or 12 digits")
+        return v
+
+
+class CreditorResponse(CreditorBase):
     id: int
+    case_id: int
+    number: int | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# === Debts ===
+class DebtBase(BaseModel):
+    creditor_name: str
+    amount_rubles: int
+    amount_kopecks: int = 0
+    source: str | None = None
+    creditor_id: int | None = None
+
+
+class DebtCreate(DebtBase):
+    pass
+
+
+class DebtUpdate(BaseModel):
+    creditor_name: str | None = None
+    amount_rubles: int | None = None
+    amount_kopecks: int | None = None
+    source: str | None = None
+    creditor_id: int | None = None
+
+
+class DebtResponse(DebtBase):
+    id: int
+    case_id: int
+    number: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -154,4 +231,5 @@ class CaseResponse(BaseModel):
     monthly_income: Decimal | None
     notes: str | None
     creditors: list[CreditorResponse] = []
+    debts: list[DebtResponse] = []
     model_config = ConfigDict(from_attributes=True)

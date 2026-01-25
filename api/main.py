@@ -4,7 +4,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from config import settings
-from routers import cases, creditors, documents, ai
+from routers import cases, creditors, debts, documents, ai
 
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
@@ -31,6 +31,7 @@ app.add_middleware(
 # Include routers
 app.include_router(cases.router)
 app.include_router(creditors.router)
+app.include_router(debts.router)
 app.include_router(documents.router)
 app.include_router(ai.router)
 

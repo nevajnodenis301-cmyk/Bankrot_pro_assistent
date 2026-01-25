@@ -3,7 +3,7 @@ from sqlalchemy import select
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from models.case import Case, Creditor
+from models.case import Case, Creditor, Debt
 from schemas.case import CaseCreate, CaseUpdate
 
 
@@ -38,7 +38,7 @@ class CaseService:
         self, telegram_user_id: int | None = None, status: str | None = None, limit: int = 50, offset: int = 0
     ) -> list[Case]:
         """Get all cases with optional filters"""
-        query = select(Case).options(selectinload(Case.creditors))
+        query = select(Case).options(selectinload(Case.creditors), selectinload(Case.debts))
 
         if telegram_user_id:
             query = query.where(Case.telegram_user_id == telegram_user_id)
@@ -52,16 +52,22 @@ class CaseService:
         return list(result.scalars().all())
 
     async def get_by_id(self, case_id: int) -> Case | None:
-        """Get case by ID with creditors"""
+        """Get case by ID with creditors and debts"""
         result = await self.db.execute(
-            select(Case).where(Case.id == case_id).options(selectinload(Case.creditors))
+            select(Case).where(Case.id == case_id).options(
+                selectinload(Case.creditors),
+                selectinload(Case.debts)
+            )
         )
         return result.scalar_one_or_none()
 
     async def get_by_case_number(self, case_number: str) -> Case | None:
         """Get case by case number"""
         result = await self.db.execute(
-            select(Case).where(Case.case_number == case_number).options(selectinload(Case.creditors))
+            select(Case).where(Case.case_number == case_number).options(
+                selectinload(Case.creditors),
+                selectinload(Case.debts)
+            )
         )
         return result.scalar_one_or_none()
 
@@ -128,3 +134,76 @@ class CaseService:
             select(Creditor).where(Creditor.id == creditor_id)
         )
         return result.scalar_one_or_none()
+
+    async def update_creditor(self, creditor_id: int, creditor_data: dict) -> Creditor | None:
+        """Update a creditor by ID"""
+        creditor = await self.get_creditor_by_id(creditor_id)
+        if not creditor:
+            return None
+
+        for key, value in creditor_data.items():
+            if hasattr(creditor, key):
+                setattr(creditor, key, value)
+
+        await self.db.commit()
+        await self.db.refresh(creditor)
+        return creditor
+
+    # === Debt Management ===
+
+    async def add_debt(self, case_id: int, debt_data: dict) -> Debt | None:
+        """Add debt to case"""
+        case = await self.get_by_id(case_id)
+        if not case:
+            return None
+
+        # Get next debt number
+        result = await self.db.execute(
+            select(Debt).where(Debt.case_id == case_id).order_by(Debt.number.desc())
+        )
+        last_debt = result.scalar_one_or_none()
+        next_number = (last_debt.number + 1) if last_debt and last_debt.number else 1
+
+        debt = Debt(case_id=case_id, number=next_number, **debt_data)
+        self.db.add(debt)
+        await self.db.commit()
+        await self.db.refresh(debt)
+        return debt
+
+    async def get_debts(self, case_id: int) -> list[Debt] | None:
+        """Get all debts for a case"""
+        case = await self.get_by_id(case_id)
+        if not case:
+            return None
+        return case.debts
+
+    async def get_debt_by_id(self, debt_id: int) -> Debt | None:
+        """Get a single debt by ID"""
+        result = await self.db.execute(
+            select(Debt).where(Debt.id == debt_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_debt(self, debt_id: int, debt_data: dict) -> Debt | None:
+        """Update a debt by ID"""
+        debt = await self.get_debt_by_id(debt_id)
+        if not debt:
+            return None
+
+        for key, value in debt_data.items():
+            if hasattr(debt, key):
+                setattr(debt, key, value)
+
+        await self.db.commit()
+        await self.db.refresh(debt)
+        return debt
+
+    async def delete_debt(self, debt_id: int) -> bool:
+        """Delete a debt by ID"""
+        debt = await self.get_debt_by_id(debt_id)
+        if not debt:
+            return False
+
+        await self.db.delete(debt)
+        await self.db.commit()
+        return True
