@@ -1,77 +1,56 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from io import BytesIO
 from database import get_db
-from services.case_service import CaseService
+from models import Case
 from services.document_service import generate_bankruptcy_petition
 from security import require_api_token
+from sqlalchemy import select
 
-router = APIRouter(prefix="/api/documents", tags=["documents"], dependencies=[Depends(require_api_token)])
+router = APIRouter(
+    prefix="/api/documents", 
+    tags=["documents"], 
+    dependencies=[Depends(require_api_token)]
+)
 
 
 @router.get("/{case_id}/bankruptcy-application")
-async def get_bankruptcy_application(request: Request, case_id: int, db: AsyncSession = Depends(get_db)):
-    """Generate bankruptcy application document"""
-    limiter = request.app.state.limiter
-    service = CaseService(db)
-    case = await service.get_by_id(case_id)
-    if not case:
-        raise HTTPException(404, "Дело не найдено")
-
-    # Convert case to dict for document generation
-    case_data = {
-        "case_number": case.case_number,
-        "full_name": case.full_name,
-        "birth_date": case.birth_date.strftime("%d.%m.%Y") if case.birth_date else None,
-        "passport_series": case.passport_series,
-        "passport_number": case.passport_number,
-        "inn": case.inn,
-        "registration_address": case.registration_address,
-        "total_debt": float(case.total_debt) if case.total_debt else 0,
-        "creditors": [
-            {
-                "name": c.name,
-                "debt_amount": float(c.debt_amount) if c.debt_amount else 0,
-                "debt_type": c.debt_type,
-            }
-            for c in case.creditors
-        ],
-    }
-
-    try:
-        doc_bytes = generate_bankruptcy_petition(case_data)
-    except FileNotFoundError:
-        raise HTTPException(500, "Шаблон документа не найден")
-    except Exception as e:
-        raise HTTPException(500, f"Ошибка генерации документа: {e}")
-
-    return StreamingResponse(
-        BytesIO(doc_bytes),
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename=bankruptcy_{case.case_number}.docx"},
+async def get_bankruptcy_application(case_id: int, db: AsyncSession = Depends(get_db)):
+    """Generate bankruptcy petition document"""
+    
+    # Load case with all relationships
+    result = await db.execute(
+        select(Case)
+        .options(
+            selectinload(Case.creditors),
+            selectinload(Case.debts),
+            selectinload(Case.children),
+            selectinload(Case.income_records),
+            selectinload(Case.properties),
+            selectinload(Case.transactions)
+        )
+        .where(Case.id == case_id)
     )
-
-
-@router.get("/cases/{case_id}/document/petition")
-async def get_bankruptcy_petition(request: Request, case_id: int, db: AsyncSession = Depends(get_db)):
-    """Generate bankruptcy petition document with full Russian formatting"""
-    limiter = request.app.state.limiter
-    service = CaseService(db)
-    case = await service.get_by_id(case_id)
+    case = result.scalar_one_or_none()
+    
     if not case:
-        raise HTTPException(404, "Дело не найдено")
-
-    # Generate document using new service
+        raise HTTPException(status_code=404, detail="Дело не найдено")
+    
     try:
+        # Generate document - pass Case object directly
         doc_buffer = generate_bankruptcy_petition(case)
-    except FileNotFoundError:
-        raise HTTPException(500, "Шаблон документа не найден")
+        
+        return StreamingResponse(
+            doc_buffer,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename=bankruptcy_petition_{case.case_number}.docx"
+            }
+        )
+        
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=f"Шаблон документа не найден: {e}")
     except Exception as e:
-        raise HTTPException(500, f"Ошибка генерации документа: {e}")
-
-    return StreamingResponse(
-        doc_buffer,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename=bankruptcy_petition_{case.case_number}.docx"},
-    )
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации документа: {str(e)}")

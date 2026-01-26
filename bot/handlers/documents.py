@@ -1,23 +1,19 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, FSInputFile, BufferedInputFile
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.filters import Command
-import httpx
-from config import settings
-from exceptions import (
-    BotException,
-    APIError,
-    APITimeoutError,
-    DocumentGenerationError,
-)
+from services.api_client import APIClient
+from exceptions import BotException, APIError, APITimeoutError, DocumentGenerationError
 import logging
+import httpx
 
 logger = logging.getLogger(__name__)
-
 router = Router()
+api = APIClient()
 
 
 @router.message(Command("документ", "document"))
 async def cmd_document(message: Message):
+    """Command to generate document (legacy)"""
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
         await message.answer(
@@ -27,67 +23,107 @@ async def cmd_document(message: Message):
             parse_mode="HTML",
         )
         return
-
-    case_number = parts[1].strip()
-    await message.answer("⏳ Генерирую документ...")
-
-    # Note: This is a simplified version. In production, you'd need to:
-    # 1. Find case by case_number
-    # 2. Download document from API
-    # 3. Send to user
+    
     await message.answer(
-        "ℹ️ Генерация документов через бот будет доступна в следующей версии.\n"
-        "Пожалуйста, используйте веб-интерфейс для получения документов."
+        "ℹ️ Пожалуйста, используйте меню дела для генерации документа:\n"
+        "📋 Мои дела → выберите дело → 📄 Создать заявление"
     )
 
 
 @router.callback_query(F.data.startswith("doc_"))
 async def generate_document(callback: CallbackQuery):
+    """Generate bankruptcy petition document"""
     case_id = int(callback.data.split("_")[1])
-
-    await callback.message.answer("⏳ Генерирую документ...")
-
+    
+    await callback.message.answer("⏳ Генерирую заявление о банкротстве...")
+    
     try:
+        # Use API client with authentication
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.get(f"{settings.API_BASE_URL}/api/documents/{case_id}/bankruptcy-application")
-
+            response = await client.get(
+                f"{api.base_url}/api/documents/{case_id}/bankruptcy-application",
+                headers=api._headers  # This includes the API token
+            )
+            
             if response.status_code == 200:
-                # Send document
-                document = BufferedInputFile(response.content, filename=f"bankruptcy_{case_id}.docx")
-                await callback.message.answer_document(
-                    document=document, caption="📄 Заявление о банкротстве сформировано"
+                # Send document to user
+                document = BufferedInputFile(
+                    response.content, 
+                    filename=f"bankruptcy_petition_{case_id}.docx"
                 )
+                await callback.message.answer_document(
+                    document=document,
+                    caption="✅ <b>Заявление о банкротстве сформировано</b>\n\n"
+                           "Документ готов к подаче в суд.",
+                    parse_mode="HTML"
+                )
+                logger.info(f"Document generated successfully for case {case_id}")
+                
             elif response.status_code == 404:
                 await callback.message.answer(
-                    "❌ Дело не найдено. Проверьте номер дела."
+                    "❌ Дело не найдено. Возможно, оно было удалено."
                 )
+                logger.warning(f"Case {case_id} not found for document generation")
+                
+            elif response.status_code == 401:
+                await callback.message.answer(
+                    "❌ Ошибка авторизации. Обратитесь к администратору."
+                )
+                logger.error(f"Authentication error generating document for case {case_id}")
+                
             elif response.status_code >= 500:
-                raise APIError(f"Server error: {response.status_code}", status_code=response.status_code)
+                await callback.message.answer(
+                    "❌ Ошибка сервера. Попробуйте позже."
+                )
+                logger.error(f"Server error {response.status_code} generating document for case {case_id}")
+                
             else:
-                raise DocumentGenerationError(f"Failed to generate document: {response.status_code}")
-
+                await callback.message.answer(
+                    f"❌ Ошибка генерации документа (код {response.status_code})"
+                )
+                logger.error(f"Unexpected status {response.status_code} for case {case_id}")
+                
     except httpx.TimeoutException:
+        await callback.message.answer(
+            "❌ Превышено время ожидания. Попробуйте позже."
+        )
         logger.error(f"Timeout generating document for case {case_id}")
-        await callback.message.answer(
-            "❌ Сервер не отвечает. Генерация документа занимает больше времени, чем ожидалось.\n"
-            "Попробуйте позже или обратитесь к администратору."
-        )
-    except httpx.NetworkError as e:
-        logger.error(f"Network error generating document for case {case_id}: {e}")
-        await callback.message.answer(
-            "❌ Ошибка сети. Проверьте подключение к интернету и попробуйте позже."
-        )
-    except DocumentGenerationError as e:
-        logger.error(f"Document generation error for case {case_id}: {e}")
-        await callback.message.answer(f"❌ {e.user_message}")
-    except BotException as e:
-        logger.error(f"Bot exception generating document for case {case_id}: {e}")
-        await callback.message.answer(f"❌ {e.user_message}")
+        
     except Exception as e:
-        logger.exception(f"Unexpected error generating document for case {case_id}: {e}")
         await callback.message.answer(
-            "❌ Произошла непредвиденная ошибка при генерации документа.\n"
-            "Попробуйте позже или обратитесь к администратору."
+            "❌ Произошла ошибка при генерации документа."
         )
+        logger.error(f"Document generation error for case {case_id}: {e}", exc_info=True)
+    
+    finally:
+        await callback.answer()
 
-    await callback.answer()
+
+@router.callback_query(F.data.startswith("case:") & F.data.endswith(":generate"))
+async def generate_from_case_menu(callback: CallbackQuery):
+    """Generate document from case detail menu"""
+    parts = callback.data.split(":")
+    case_number = parts[1]
+    
+    # Need to get case_id from case_number
+    try:
+        # This is a workaround - ideally case_id should be in callback_data
+        # For now, extract from existing case data or fetch
+        await callback.answer("⏳ Генерирую документ...", show_alert=False)
+        
+        # Try to find case by number
+        cases = await api.get_cases_by_user(callback.from_user.id)
+        case = next((c for c in cases if c.get('case_number') == case_number), None)
+        
+        if case:
+            case_id = case['id']
+            # Reuse the main generation function
+            callback.data = f"doc_{case_id}"
+            await generate_document(callback)
+        else:
+            await callback.message.answer("❌ Не удалось найти дело")
+            
+    except Exception as e:
+        logger.error(f"Error in generate_from_case_menu: {e}")
+        await callback.message.answer("❌ Ошибка генерации документа")
+        await callback.answer()

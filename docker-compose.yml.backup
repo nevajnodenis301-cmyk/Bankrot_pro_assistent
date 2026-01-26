@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: bankrot
+      POSTGRES_USER: ${POSTGRES_USER:-bankrot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bankrot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-bankrot}:${POSTGRES_PASSWORD}@postgres:5432/bankrot
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      AI_PROVIDER: ${AI_PROVIDER:-timeweb}
+      TIMEWEB_API_KEY: ${TIMEWEB_API_KEY}
+      TIMEWEB_API_URL: ${TIMEWEB_API_URL:-https://api.timeweb.cloud/v1}
+      YANDEXGPT_API_KEY: ${YANDEXGPT_API_KEY:-}
+      YANDEXGPT_FOLDER_ID: ${YANDEXGPT_FOLDER_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  bot:
+    build: ./bot
+    environment:
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
+      API_BASE_URL: http://api:8000
+      REDIS_URL: redis://redis:6379/1
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    environment:
+      API_BASE_URL: http://api:8000
+      API_TOKEN: ${API_TOKEN} 
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -17,7 +17,6 @@ class AIAnswer(BaseModel):
 @router.post("/ask", response_model=AIAnswer)
 async def ask_ai(request: Request, data: AIQuestion):
     """Ask AI assistant about bankruptcy law (127-FZ)"""
-    limiter = request.app.state.limiter
 
     if not data.question.strip():
         raise HTTPException(400, "Вопрос не может быть пустым")
