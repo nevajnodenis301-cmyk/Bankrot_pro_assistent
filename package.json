@@ -1,0 +1,28 @@
+{
+  "name": "bankrot_pro",
+  "version": "1.0.0",
+  "description": "Комплексная система управления делами по банкротству физических лиц для юристов. Реализует полный цикл работы в соответствии с 127-ФЗ РФ \"О несостоятельности (банкротстве)\".",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nevajnodenis301-cmyk/Bankrot_pro_assistent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nevajnodenis301-cmyk/Bankrot_pro_assistent/issues"
+  },
+  "homepage": "https://github.com/nevajnodenis301-cmyk/Bankrot_pro_assistent#readme",
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "prettier": "^3.8.1"
+  }
+}
