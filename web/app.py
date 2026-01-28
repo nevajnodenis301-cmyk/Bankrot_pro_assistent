@@ -13,10 +13,15 @@ st.set_page_config(
     }
 )
 
+# Отключаем автоперевод в Chrome/Edge
 st.markdown(
     """
     <meta name="google" content="notranslate">
     <meta http-equiv="Content-Language" content="ru">
+    <script>
+        document.documentElement.setAttribute('lang', 'ru');
+        document.documentElement.setAttribute('translate', 'no');
+    </script>
     """,
     unsafe_allow_html=True
 )

@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="Список дел", page_icon="📋", layout="wide")
+
 import httpx
 import os
 from datetime import datetime
