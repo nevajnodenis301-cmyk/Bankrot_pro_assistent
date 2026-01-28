@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
 
+
 class Case(Base):
     __tablename__ = "cases"
 
@@ -17,7 +18,7 @@ class Case(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     telegram_user_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
-
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
     # Personal Information
     passport_series: Mapped[str | None] = mapped_column(String(4))
     passport_number: Mapped[str | None] = mapped_column(String(6))
@@ -79,7 +80,7 @@ class Case(Base):
     income_records: Mapped[list["Income"]] = relationship(back_populates="case", cascade="all, delete-orphan")
     properties: Mapped[list["Property"]] = relationship(back_populates="case", cascade="all, delete-orphan")
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="case", cascade="all, delete-orphan")
-
+    owner: Mapped["User"] = relationship(back_populates="cases")
 
 class Creditor(Base):
     __tablename__ = "creditors"
