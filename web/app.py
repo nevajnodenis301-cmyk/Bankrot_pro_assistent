@@ -1,6 +1,25 @@
+@"
 import streamlit as st
 
-st.set_page_config(page_title="Банкрот ПРО", page_icon="⚖️", layout="wide")
+st.set_page_config(
+    page_title="Банкрот ПРО",
+    page_icon="⚖️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
+)
+
+st.markdown(
+    """
+    <meta name="google" content="notranslate">
+    <meta http-equiv="Content-Language" content="ru">
+    """,
+    unsafe_allow_html=True
+)
 
 st.title("⚖️ Банкрот ПРО")
 st.markdown("Система управления делами по банкротству физических лиц")
@@ -20,7 +39,7 @@ st.markdown(
 **Возможности:**
 - Управление делами о банкротстве
 - Хранение конфиденциальных данных клиентов
-- Генерация документов (заявления, реестры кредиторов)
+- Генерация документов (заявления, реестры кредиторов)  
 - AI-ассистент по вопросам законодательства
 - Telegram-бот для быстрого доступа
 
@@ -35,7 +54,6 @@ st.markdown(
 """
 )
 
-# Sidebar info
 st.sidebar.title("Информация")
 st.sidebar.info(
     """
@@ -51,3 +69,4 @@ st.sidebar.info(
 )
 
 st.sidebar.success("Выберите раздел выше ☝️")
+"@ | Out-File -FilePath web\app.py -Encoding UTF8
