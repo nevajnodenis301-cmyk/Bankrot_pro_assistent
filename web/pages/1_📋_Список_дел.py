@@ -1,22 +1,35 @@
 import streamlit as st
 st.set_page_config(page_title="Список дел", page_icon="📋", layout="wide")
 
-import httpx
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.auth import require_auth, get_auth_headers, show_user_sidebar
+
+# Require authentication
+require_auth()
+
+import httpx
 from datetime import datetime
 
 API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
-API_TOKEN = os.getenv("API_TOKEN")
-DEFAULT_HEADERS = {"X-API-Token": API_TOKEN} if API_TOKEN else {}
+
+# Use JWT auth headers instead of API token
+def get_headers():
+    return get_auth_headers()
 
 st.title("📋 Список дел")
+
+# Show user in sidebar
+show_user_sidebar()
 
 
 @st.cache_data(ttl=30)
 def get_cases():
     """Fetch all cases from API"""
     try:
-        response = httpx.get(f"{API_URL}/api/cases", headers=DEFAULT_HEADERS)
+        response = httpx.get(f"{API_URL}/api/cases", headers=get_headers())
         response.raise_for_status()
         return response.json()
     except Exception as e:

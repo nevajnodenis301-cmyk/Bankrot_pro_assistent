@@ -1,14 +1,30 @@
 import streamlit as st
-import httpx
+st.set_page_config(page_title="Кредиторы", page_icon="💳", layout="wide")
+
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.auth import require_auth, get_auth_headers, show_user_sidebar
+
+# Require authentication
+require_auth()
+
+import httpx
 from datetime import datetime, date
 
 API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
-API_TOKEN = os.getenv("API_TOKEN")
-DEFAULT_HEADERS = {"X-API-Token": API_TOKEN} if API_TOKEN else {}
 
-st.set_page_config(page_title="Кредиторы", page_icon="💳", layout="wide")
+
+def get_headers():
+    """Get fresh auth headers for each API call."""
+    return get_auth_headers()
+
+
 st.title("💳 Управление кредиторами")
+
+# Show user in sidebar
+show_user_sidebar()
 
 
 def format_money(amount):
@@ -22,7 +38,7 @@ def format_money(amount):
 def get_cases():
     """Fetch all cases from API"""
     try:
-        response = httpx.get(f"{API_URL}/api/cases", headers=DEFAULT_HEADERS, timeout=30.0)
+        response = httpx.get(f"{API_URL}/api/cases", headers=get_headers(), timeout=30.0)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -35,7 +51,7 @@ def get_creditors(case_id: int):
     try:
         response = httpx.get(
             f"{API_URL}/api/creditors/{case_id}",
-            headers=DEFAULT_HEADERS,
+            headers=get_headers(),
             timeout=30.0
         )
         response.raise_for_status()
@@ -51,7 +67,7 @@ def add_creditor(case_id: int, creditor_data: dict):
         response = httpx.post(
             f"{API_URL}/api/creditors/{case_id}",
             json=creditor_data,
-            headers=DEFAULT_HEADERS,
+            headers=get_headers(),
             timeout=30.0
         )
         response.raise_for_status()
@@ -67,7 +83,7 @@ def delete_creditor(creditor_id: int):
     try:
         response = httpx.delete(
             f"{API_URL}/api/creditors/{creditor_id}",
-            headers=DEFAULT_HEADERS,
+            headers=get_headers(),
             timeout=30.0
         )
         response.raise_for_status()
@@ -84,7 +100,7 @@ def update_case_total_debt(case_id: int, total_debt: float):
         response = httpx.put(
             f"{API_URL}/api/cases/{case_id}",
             json={"total_debt": total_debt},
-            headers=DEFAULT_HEADERS,
+            headers=get_headers(),
             timeout=30.0
         )
         response.raise_for_status()

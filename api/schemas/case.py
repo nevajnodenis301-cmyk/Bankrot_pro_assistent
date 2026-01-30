@@ -133,6 +133,12 @@ class CaseUpdate(BaseModel):
     total_debt: Decimal | None = None
     monthly_income: Decimal | None = None
     notes: str | None = None
+    # Spouse fields
+    spouse_name: str | None = None
+    marriage_certificate_number: str | None = None
+    marriage_certificate_date: date | None = None
+    divorce_certificate_number: str | None = None
+    divorce_certificate_date: date | None = None
 
     @field_validator("status")
     @classmethod

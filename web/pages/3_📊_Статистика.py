@@ -1,8 +1,16 @@
 import streamlit as st
 st.set_page_config(page_title="Статистика", page_icon="📊", layout="wide")
 
-import httpx
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.auth import require_auth, get_auth_headers, show_user_sidebar
+
+# Require authentication
+require_auth()
+
+import httpx
 import pandas as pd
 import plotly.express as px
 
@@ -10,12 +18,15 @@ API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 st.title("📊 Статистика")
 
+# Show user in sidebar
+show_user_sidebar()
+
 
 @st.cache_data(ttl=60)
 def get_cases():
     """Fetch all cases from API"""
     try:
-        response = httpx.get(f"{API_URL}/api/cases")
+        response = httpx.get(f"{API_URL}/api/cases", headers=get_auth_headers(), timeout=30.0)
         response.raise_for_status()
         return response.json()
     except Exception as e:
