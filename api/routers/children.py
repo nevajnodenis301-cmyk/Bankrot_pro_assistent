@@ -4,12 +4,12 @@ from sqlalchemy import select
 from database import get_db
 from models.case import Child, Case
 from schemas.case import ChildCreate, ChildResponse
-from security import require_api_token
+from security import get_user_or_api_token
 
 router = APIRouter(
     prefix="/api/children",
     tags=["children"],
-    dependencies=[Depends(require_api_token)]
+    dependencies=[Depends(get_user_or_api_token)]
 )
 
 

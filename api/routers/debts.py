@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from schemas.case import DebtCreate, DebtUpdate, DebtResponse
 from services.case_service import CaseService
-from security import require_api_token
+from security import get_user_or_api_token
 
-router = APIRouter(prefix="/api/debts", tags=["debts"], dependencies=[Depends(require_api_token)])
+router = APIRouter(prefix="/api/debts", tags=["debts"], dependencies=[Depends(get_user_or_api_token)])
 
 
 @router.get("/{case_id}", response_model=list[DebtResponse])

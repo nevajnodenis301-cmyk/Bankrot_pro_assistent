@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from services.ai_service import get_ai_provider
-from security import require_api_token
+from security import get_user_or_api_token
 
-router = APIRouter(prefix="/api/ai", tags=["ai"], dependencies=[Depends(require_api_token)])
+router = APIRouter(prefix="/api/ai", tags=["ai"], dependencies=[Depends(get_user_or_api_token)])
 
 
 class AIQuestion(BaseModel):

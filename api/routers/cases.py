@@ -5,7 +5,7 @@ from datetime import date
 from database import get_db
 from schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
 from services.case_service import CaseService
-from security import require_api_token
+from security import get_user_or_api_token
 
 
 class ClientDataUpdate(BaseModel):
@@ -59,7 +59,7 @@ class ClientDataUpdate(BaseModel):
             raise ValueError("gender must be 'M' or 'F'")
         return v
 
-router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(require_api_token)])
+router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(get_user_or_api_token)])
 
 @router.post("", response_model=CaseResponse, status_code=201)
 async def create_case(request: Request, data: CaseCreate, db: AsyncSession = Depends(get_db)):

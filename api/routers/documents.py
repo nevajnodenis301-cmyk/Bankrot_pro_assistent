@@ -6,13 +6,13 @@ from io import BytesIO
 from database import get_db
 from models import Case
 from services.document_service import generate_bankruptcy_petition
-from security import require_api_token
+from security import get_user_or_api_token
 from sqlalchemy import select
 
 router = APIRouter(
-    prefix="/api/documents", 
-    tags=["documents"], 
-    dependencies=[Depends(require_api_token)]
+    prefix="/api/documents",
+    tags=["documents"],
+    dependencies=[Depends(get_user_or_api_token)]
 )
 
 

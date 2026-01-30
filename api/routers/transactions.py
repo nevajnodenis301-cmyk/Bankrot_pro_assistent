@@ -4,12 +4,12 @@ from sqlalchemy import select
 from database import get_db
 from models.case import Transaction, Case
 from schemas.case import TransactionCreate, TransactionResponse
-from security import require_api_token
+from security import get_user_or_api_token
 
 router = APIRouter(
     prefix="/api/transactions",
     tags=["transactions"],
-    dependencies=[Depends(require_api_token)]
+    dependencies=[Depends(get_user_or_api_token)]
 )
 
 
