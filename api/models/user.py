@@ -7,6 +7,7 @@ from uuid import uuid4
 from sqlalchemy import String, Boolean, DateTime, BigInteger, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
+from utils.encryption import EncryptedString
 
 
 class User(Base):
@@ -25,7 +26,7 @@ class User(Base):
     
     # Profile
     full_name: Mapped[str] = mapped_column(String(255))
-    phone: Mapped[str | None] = mapped_column(String(20))
+    phone: Mapped[str | None] = mapped_column(EncryptedString(100))  # ENCRYPTED
     
     # Telegram linking
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True)
@@ -63,7 +64,7 @@ class RefreshToken(Base):
     
     # Device/session info
     device_info: Mapped[str | None] = mapped_column(Text)
-    ip_address: Mapped[str | None] = mapped_column(String(45))
+    ip_address: Mapped[str | None] = mapped_column(EncryptedString(150))  # ENCRYPTED
     
     # Validity
     expires_at: Mapped[datetime] = mapped_column(DateTime)

@@ -3,6 +3,7 @@ from decimal import Decimal
 from sqlalchemy import String, Text, Numeric, BigInteger, Date, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
+from utils.encryption import EncryptedString, EncryptedText
 
 
 
@@ -19,20 +20,20 @@ class Case(Base):
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     telegram_user_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
-    # Personal Information
-    passport_series: Mapped[str | None] = mapped_column(String(4))
-    passport_number: Mapped[str | None] = mapped_column(String(6))
-    passport_issued_by: Mapped[str | None] = mapped_column(Text)
+    # Personal Information (ENCRYPTED - PII data)
+    passport_series: Mapped[str | None] = mapped_column(EncryptedString(100))
+    passport_number: Mapped[str | None] = mapped_column(EncryptedString(100))
+    passport_issued_by: Mapped[str | None] = mapped_column(EncryptedText())
     passport_issued_date: Mapped[datetime | None] = mapped_column(Date)
-    passport_code: Mapped[str | None] = mapped_column(String(10))
-    
+    passport_code: Mapped[str | None] = mapped_column(EncryptedString(100))
+
     birth_date: Mapped[datetime | None] = mapped_column(Date)
-    registration_address: Mapped[str | None] = mapped_column(Text)
-    phone: Mapped[str | None] = mapped_column(String(20))
-    email: Mapped[str | None] = mapped_column(String(100))
-    inn: Mapped[str | None] = mapped_column(String(12))
-    snils: Mapped[str | None] = mapped_column(String(14))
-    gender: Mapped[str | None] = mapped_column(String(1))  # M or F
+    registration_address: Mapped[str | None] = mapped_column(EncryptedText())
+    phone: Mapped[str | None] = mapped_column(EncryptedString(100))
+    email: Mapped[str | None] = mapped_column(EncryptedString(200))
+    inn: Mapped[str | None] = mapped_column(EncryptedString(100))
+    snils: Mapped[str | None] = mapped_column(EncryptedString(100))
+    gender: Mapped[str | None] = mapped_column(String(1))  # M or F (not PII)
     
     # Court Information
     court_name: Mapped[str | None] = mapped_column(String(255))
@@ -87,13 +88,13 @@ class Creditor(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     case_id: Mapped[int] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"))
-    
+
     number: Mapped[int | None] = mapped_column()  # Sequential number in list
     name: Mapped[str] = mapped_column(String(255))
     ogrn: Mapped[str | None] = mapped_column(String(20))
-    inn: Mapped[str | None] = mapped_column(String(12))
-    address: Mapped[str | None] = mapped_column(Text)
-    
+    inn: Mapped[str | None] = mapped_column(EncryptedString(100))  # ENCRYPTED for individual creditors
+    address: Mapped[str | None] = mapped_column(EncryptedText())  # ENCRYPTED
+
     creditor_type: Mapped[str | None] = mapped_column(String(50))  # bank, mfo, individual
     debt_amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 2))
     debt_type: Mapped[str | None] = mapped_column(String(100))
@@ -121,28 +122,29 @@ class Debt(Base):
 
 
 class Child(Base):
-    """Child dependents"""
+    """Child dependents (ENCRYPTED - minor's PII data)"""
     __tablename__ = "children"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     case_id: Mapped[int] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"))
-    
-    child_name: Mapped[str] = mapped_column(String(255))
+
+    # ENCRYPTED fields - minor's personal data
+    child_name: Mapped[str] = mapped_column(EncryptedString(400))
     child_birth_date: Mapped[datetime] = mapped_column(Date)
-    
-    # Birth certificate (for children under 14)
+
+    # Birth certificate (for children under 14) - ENCRYPTED
     child_has_certificate: Mapped[bool] = mapped_column(Boolean, default=True)
-    child_certificate_number: Mapped[str | None] = mapped_column(String(100))
+    child_certificate_number: Mapped[str | None] = mapped_column(EncryptedString(200))
     child_certificate_date: Mapped[datetime | None] = mapped_column(Date)
-    
-    # Passport (for children 14+)
+
+    # Passport (for children 14+) - ENCRYPTED
     child_has_passport: Mapped[bool] = mapped_column(Boolean, default=False)
-    child_passport_series: Mapped[str | None] = mapped_column(String(4))
-    child_passport_number: Mapped[str | None] = mapped_column(String(6))
-    child_passport_issued_by: Mapped[str | None] = mapped_column(Text)
+    child_passport_series: Mapped[str | None] = mapped_column(EncryptedString(100))
+    child_passport_number: Mapped[str | None] = mapped_column(EncryptedString(100))
+    child_passport_issued_by: Mapped[str | None] = mapped_column(EncryptedText())
     child_passport_date: Mapped[datetime | None] = mapped_column(Date)
-    child_passport_code: Mapped[str | None] = mapped_column(String(10))
-    
+    child_passport_code: Mapped[str | None] = mapped_column(EncryptedString(100))
+
     case: Mapped["Case"] = relationship(back_populates="children")
 
 
@@ -167,22 +169,22 @@ class Property(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     case_id: Mapped[int] = mapped_column(ForeignKey("cases.id", ondelete="CASCADE"))
-    
+
     property_type: Mapped[str] = mapped_column(String(50))  # "real_estate", "vehicle", "other"
     description: Mapped[str] = mapped_column(Text)
-    
+
     # For vehicles
     vehicle_make: Mapped[str | None] = mapped_column(String(100))
     vehicle_model: Mapped[str | None] = mapped_column(String(100))
     vehicle_year: Mapped[int | None] = mapped_column()
-    vehicle_vin: Mapped[str | None] = mapped_column(String(50))
+    vehicle_vin: Mapped[str | None] = mapped_column(EncryptedString(150))  # ENCRYPTED
     vehicle_color: Mapped[str | None] = mapped_column(String(50))
-    
+
     # Pledge information
     is_pledged: Mapped[bool] = mapped_column(Boolean, default=False)
     pledge_creditor: Mapped[str | None] = mapped_column(String(255))
     pledge_document: Mapped[str | None] = mapped_column(Text)
-    
+
     case: Mapped["Case"] = relationship(back_populates="properties")
 
 
