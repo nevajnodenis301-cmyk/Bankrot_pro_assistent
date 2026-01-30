@@ -33,6 +33,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-bankrot}:${POSTGRES_PASSWORD}@postgres:5432/bankrot
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
+      API_TOKEN: ${API_TOKEN}
       AI_PROVIDER: ${AI_PROVIDER:-timeweb}
       TIMEWEB_API_KEY: ${TIMEWEB_API_KEY}
       TIMEWEB_API_URL: ${TIMEWEB_API_URL:-https://api.timeweb.cloud/v1}

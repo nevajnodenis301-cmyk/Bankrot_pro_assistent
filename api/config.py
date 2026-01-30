@@ -1,7 +1,6 @@
 """
 Application configuration.
 """
-import secrets
 from pydantic_settings import BaseSettings
 
 
@@ -14,10 +13,10 @@ class Settings(BaseSettings):
     # API
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
-    API_TOKEN: str = "change-me-in-production"  # For bot-to-API auth
-    
+    API_TOKEN: str  # REQUIRED: Bot-to-API auth token - set in .env
+
     # JWT Authentication
-    SECRET_KEY: str = secrets.token_urlsafe(32)  # Override in .env!
+    SECRET_KEY: str  # REQUIRED: JWT signing key - set in .env (use: python -c "import secrets; print(secrets.token_urlsafe(32))")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
