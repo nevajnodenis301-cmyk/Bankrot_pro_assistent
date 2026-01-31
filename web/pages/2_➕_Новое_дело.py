@@ -335,7 +335,7 @@ with st.form("case_form"):
 
         telegram_user_id = st.number_input(
             "Telegram User ID",
-            value=existing_case.get("telegram_user_id", 0) if existing_case else 0,
+            value=(existing_case.get("telegram_user_id") or 0) if existing_case else 0,
             min_value=0,
             step=1
         )
