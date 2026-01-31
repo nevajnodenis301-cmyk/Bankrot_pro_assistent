@@ -18,7 +18,7 @@ from schemas.auth import (
     LinkingCodeResponse,
     MessageResponse,
 )
-from security import get_current_user, get_current_user_optional
+from security import get_current_user, get_current_user_optional, require_api_token
 from models.user import User
 
 
@@ -226,7 +226,7 @@ async def generate_telegram_link_code(
     )
 
 
-@router.post("/telegram/confirm", response_model=UserResponse)
+@router.post("/telegram/confirm", response_model=UserResponse, dependencies=[Depends(require_api_token)])
 async def confirm_telegram_link(
     data: TelegramLinkConfirm,
     db: AsyncSession = Depends(get_db)
@@ -283,7 +283,7 @@ async def unlink_telegram(
 
 # ============== Bot Authentication ==============
 
-@router.get("/telegram/user/{telegram_id}", response_model=UserResponse)
+@router.get("/telegram/user/{telegram_id}", response_model=UserResponse, dependencies=[Depends(require_api_token)])
 async def get_user_by_telegram(
     telegram_id: int,
     db: AsyncSession = Depends(get_db)

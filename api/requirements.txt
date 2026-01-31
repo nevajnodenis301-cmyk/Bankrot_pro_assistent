@@ -1,5 +1,5 @@
 # FastAPI & Web
-fastapi==0.115.0
+fastapi==0.115.3
 uvicorn[standard]==0.30.0
 python-multipart==0.0.9
 
@@ -15,7 +15,7 @@ email-validator==2.1.0  # For EmailStr
 
 # Authentication
 passlib[bcrypt]==1.7.4  # Password hashing
-python-jose[cryptography]==3.3.0  # JWT tokens
+python-jose[cryptography]==3.4.0  # JWT tokens
 bcrypt==4.1.2  # Bcrypt backend
 
 # HTTP Client
