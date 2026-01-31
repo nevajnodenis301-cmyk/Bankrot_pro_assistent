@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, field_validator
 from datetime import date
 from database import get_db
+from models.case import Case
+from models.user import User
 from schemas.case import CaseCreate, CaseUpdate, CaseResponse, CasePublic
 from services.case_service import CaseService
-from security import get_user_or_api_token
+from security import get_current_user
+from utils.authorization import verify_case_access, filter_user_cases
 
 
 class ClientDataUpdate(BaseModel):
@@ -59,14 +64,19 @@ class ClientDataUpdate(BaseModel):
             raise ValueError("gender must be 'M' or 'F'")
         return v
 
-router = APIRouter(prefix="/api/cases", tags=["cases"], dependencies=[Depends(get_user_or_api_token)])
+router = APIRouter(prefix="/api/cases", tags=["cases"])
 
 @router.post("", response_model=CaseResponse, status_code=201)
-async def create_case(request: Request, data: CaseCreate, db: AsyncSession = Depends(get_db)):
+async def create_case(
+    request: Request,
+    data: CaseCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Create new bankruptcy case"""
     # Rate limiting is handled by decorator in main.py or should be applied here as decorator
     service = CaseService(db)
-    return await service.create(data)
+    return await service.create(data, owner_id=current_user.id)
 
 @router.get("", response_model=list[CasePublic])
 async def list_cases(
@@ -75,12 +85,20 @@ async def list_cases(
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """List all cases with optional filters"""
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
-    service = CaseService(db)
-    cases = await service.get_all(telegram_user_id=telegram_user_id, status=status, limit=limit, offset=offset)
+    query = select(Case).options(selectinload(Case.creditors), selectinload(Case.debts))
+    if telegram_user_id:
+        query = query.where(Case.telegram_user_id == telegram_user_id)
+    if status:
+        query = query.where(Case.status == status)
+    query = filter_user_cases(query, current_user)
+    query = query.order_by(Case.created_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(query)
+    cases = list(result.scalars().all())
     # Return public data only
     return [
         CasePublic(
@@ -96,21 +114,22 @@ async def list_cases(
     ]
 
 @router.get("/{case_id}", response_model=CaseResponse)
-async def get_case(case_id: int, db: AsyncSession = Depends(get_db)):
+async def get_case(
+    case_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Get case by ID (full data for web)"""
-    service = CaseService(db)
-    case = await service.get_by_id(case_id)
-    if not case:
-        raise HTTPException(404, "Дело не найдено")
-    return case
+    return await verify_case_access(case_id, current_user, db)
 
 @router.get("/{case_id}/public", response_model=CasePublic)
-async def get_case_public(case_id: int, db: AsyncSession = Depends(get_db)):
+async def get_case_public(
+    case_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Get case public data (for bot - without passport, INN)"""
-    service = CaseService(db)
-    case = await service.get_by_id(case_id)
-    if not case:
-        raise HTTPException(404, "Дело не найдено")
+    case = await verify_case_access(case_id, current_user, db)
     return CasePublic(
         id=case.id,
         case_number=case.case_number,
@@ -122,8 +141,14 @@ async def get_case_public(case_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 @router.put("/{case_id}", response_model=CaseResponse)
-async def update_case(case_id: int, data: CaseUpdate, db: AsyncSession = Depends(get_db)):
+async def update_case(
+    case_id: int,
+    data: CaseUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Update case"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     case = await service.update(case_id, data)
     if not case:
@@ -131,20 +156,26 @@ async def update_case(case_id: int, data: CaseUpdate, db: AsyncSession = Depends
     return case
 
 @router.delete("/{case_id}", status_code=204)
-async def delete_case(case_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_case(
+    case_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Delete case"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     if not await service.delete(case_id):
         raise HTTPException(404, "Дело не найдено")
-
 
 @router.patch("/{case_id}/client-data", response_model=CaseResponse)
 async def update_client_data(
     case_id: int,
     data: ClientDataUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update client personal data (passport, address, INN, SNILS, etc.)"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     case = await service.get_by_id(case_id)
 
@@ -175,9 +206,11 @@ class FamilyDataUpdate(BaseModel):
 async def update_family_data(
     case_id: int,
     data: FamilyDataUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update family data (marital status, spouse info)"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
@@ -207,9 +240,11 @@ class EmploymentDataUpdate(BaseModel):
 async def update_employment_data(
     case_id: int,
     data: EmploymentDataUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update employment status"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
@@ -228,8 +263,13 @@ async def update_employment_data(
 # ==================== GROUP 2: PROPERTY DATA ====================
 
 @router.patch("/{case_id}/toggle-real-estate", response_model=CaseResponse)
-async def toggle_real_estate(case_id: int, db: AsyncSession = Depends(get_db)):
+async def toggle_real_estate(
+    case_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Toggle has_real_estate flag"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
@@ -258,9 +298,11 @@ class CourtDataUpdate(BaseModel):
 async def update_court_data(
     case_id: int,
     data: CourtDataUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update court and SRO information"""
+    await verify_case_access(case_id, current_user, db)
     service = CaseService(db)
     case = await service.get_by_id(case_id)
     if not case:
@@ -274,3 +316,9 @@ async def update_court_data(
     await db.refresh(case)
 
     return case
+
+
+
+
+
+

@@ -11,7 +11,7 @@ class CaseService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, data: CaseCreate) -> Case:
+    async def create(self, data: CaseCreate, owner_id: int | None = None) -> Case:
         """Create new bankruptcy case"""
         # Generate case number using database sequence
         year = datetime.now().year
@@ -27,6 +27,7 @@ class CaseService:
             full_name=data.full_name,
             total_debt=data.total_debt,
             telegram_user_id=data.telegram_user_id,
+            owner_id=owner_id,
         )
 
         self.db.add(case)
