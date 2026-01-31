@@ -54,7 +54,7 @@ class Case(Base):
     # Employment
     is_employed: Mapped[bool | None] = mapped_column(Boolean, default=False)
     is_self_employed: Mapped[bool | None] = mapped_column(Boolean, default=False)
-    employer_name: Mapped[str | None] = mapped_column(String(255))
+    employer_name: Mapped[str | None] = mapped_column(EncryptedString(400))
     
     # Property Flags
     has_real_estate: Mapped[bool | None] = mapped_column(Boolean, default=False)
@@ -64,15 +64,15 @@ class Case(Base):
     total_debt: Mapped[Decimal | None] = mapped_column(Numeric(15, 2))
     monthly_income: Mapped[Decimal | None] = mapped_column(Numeric(15, 2))
     
-    # Financial Manager
-    sro_name: Mapped[str | None] = mapped_column(String(255))
-    sro_address: Mapped[str | None] = mapped_column(Text)
+    # Financial Manager (ENCRYPTED)
+    sro_name: Mapped[str | None] = mapped_column(EncryptedString(400))
+    sro_address: Mapped[str | None] = mapped_column(EncryptedText())
     restructuring_duration: Mapped[str | None] = mapped_column(String(50))  # "3 месяца", "6 месяцев"
     
     # Document generation
     insolvency_grounds: Mapped[str | None] = mapped_column(Text)
     
-    notes: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(EncryptedText())  # ENCRYPTED
 
     # Relationships
     creditors: Mapped[list["Creditor"]] = relationship(back_populates="case", cascade="all, delete-orphan")

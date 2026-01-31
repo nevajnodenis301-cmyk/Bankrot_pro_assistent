@@ -19,6 +19,12 @@ from config import settings
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
+def compute_email_hash(email: str) -> str:
+    """Compute SHA-256 hash of lowercased email for uniqueness checks."""
+    return hashlib.sha256(email.lower().encode()).hexdigest()
+
+
 # JWT settings
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
@@ -87,16 +93,20 @@ class AuthService:
     
     async def register_user(self, db: AsyncSession, data: UserRegister) -> User:
         """Register new user"""
-        # Check if email exists
+        # Compute email hash for uniqueness check
+        email_hash = compute_email_hash(data.email)
+
+        # Check if email exists (using hash for encrypted field lookup)
         existing = await db.execute(
-            select(User).where(User.email == data.email)
+            select(User).where(User.email_hash == email_hash)
         )
         if existing.scalar_one_or_none():
             raise ValueError("Пользователь с таким email уже существует")
-        
-        # Create user
+
+        # Create user with email_hash for future lookups
         user = User(
             email=data.email,
+            email_hash=email_hash,
             password_hash=self.hash_password(data.password),
             full_name=data.full_name,
             phone=data.phone,
@@ -108,8 +118,10 @@ class AuthService:
     
     async def authenticate_user(self, db: AsyncSession, email: str, password: str) -> Optional[User]:
         """Authenticate user by email and password"""
+        # Use email_hash for lookup (since email is encrypted)
+        email_hash = compute_email_hash(email)
         result = await db.execute(
-            select(User).where(User.email == email)
+            select(User).where(User.email_hash == email_hash)
         )
         user = result.scalar_one_or_none()
         

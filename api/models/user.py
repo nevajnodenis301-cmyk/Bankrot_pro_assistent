@@ -20,12 +20,13 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     uuid: Mapped[str] = mapped_column(String(36), unique=True, index=True, default=lambda: str(uuid4()))
     
-    # Authentication
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    # Authentication (ENCRYPTED - email_hash for uniqueness lookup)
+    email: Mapped[str] = mapped_column(EncryptedString(400), index=True)
+    email_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)  # SHA-256 hex
     password_hash: Mapped[str] = mapped_column(String(255))
-    
-    # Profile
-    full_name: Mapped[str] = mapped_column(String(255))
+
+    # Profile (ENCRYPTED)
+    full_name: Mapped[str] = mapped_column(EncryptedString(400))
     phone: Mapped[str | None] = mapped_column(EncryptedString(100))  # ENCRYPTED
     
     # Telegram linking
