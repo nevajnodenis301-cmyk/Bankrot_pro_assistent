@@ -4,10 +4,18 @@ from aiogram.fsm.state import State, StatesGroup
 class CaseCreation(StatesGroup):
     waiting_full_name = State()
     waiting_total_debt = State()
+    waiting_procedure_type = State()  # Property Realization or Debt Restructuring
     waiting_creditor_name = State()
     waiting_creditor_debt = State()
     add_more_creditors = State()
     confirmation = State()
+
+
+class DocumentGeneration(StatesGroup):
+    """FSM states for document generation flow"""
+    select_document_type = State()  # Select which document to generate
+    select_case = State()  # Select case for document generation
+    confirm_generation = State()  # Confirm before generating
 
 
 class ClientDataEdit(StatesGroup):

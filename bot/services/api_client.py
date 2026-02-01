@@ -57,20 +57,29 @@ class APIClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def create_case(
-        self, full_name: str, total_debt: float, telegram_user_id: int, creditors: list[dict]
+        self,
+        full_name: str,
+        total_debt: float,
+        telegram_user_id: int,
+        creditors: list[dict],
+        procedure_type: str | None = None
     ) -> dict:
         """Create new case and add creditors"""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 # Create case
+                case_data = {
+                    "full_name": full_name,
+                    "total_debt": total_debt,
+                    "telegram_user_id": telegram_user_id,
+                }
+                if procedure_type:
+                    case_data["procedure_type"] = procedure_type
+
                 response = await client.post(
                     f"{self.base_url}/api/cases",
                     headers=self._headers,
-                    json={
-                        "full_name": full_name,
-                        "total_debt": total_debt,
-                        "telegram_user_id": telegram_user_id,
-                    },
+                    json=case_data,
                 )
                 case = self._handle_response(response)
 
@@ -872,6 +881,93 @@ class APIClient:
             raise APITimeoutError("Timeout getting user")
         except httpx.NetworkError as e:
             logger.error(f"Network error getting user by telegram: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    # ==================== DOCUMENTS ====================
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_document_types(self) -> list:
+        """Get available document types"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/documents/types",
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error("Timeout getting document types")
+            raise APITimeoutError("Timeout getting document types")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting document types: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def generate_document(self, case_id: int, document_type: str) -> dict:
+        """Generate a document for a case"""
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/documents/cases/{case_id}/generate",
+                    headers=self._headers,
+                    json={"document_type": document_type}
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout generating document for case {case_id}")
+            raise APITimeoutError("Timeout generating document")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error generating document: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
+    async def get_case_documents(self, case_id: int) -> list:
+        """Get list of documents for a case"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/documents/cases/{case_id}/files",
+                    headers=self._headers
+                )
+                return self._handle_response(response)
+        except httpx.TimeoutException:
+            logger.error(f"Timeout getting documents for case {case_id}")
+            raise APITimeoutError("Timeout getting case documents")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error getting case documents: {e}")
+            raise APIError(f"Network error: {str(e)}")
+
+    async def download_document(self, case_id: int, file_name: str) -> bytes | None:
+        """Download a document file"""
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/api/documents/cases/{case_id}/files/{file_name}",
+                    headers=self._headers
+                )
+                if response.status_code == 200:
+                    return response.content
+                return None
+        except httpx.TimeoutException:
+            logger.error(f"Timeout downloading document {file_name}")
+            raise APITimeoutError("Timeout downloading document")
+        except httpx.NetworkError as e:
+            logger.error(f"Network error downloading document: {e}")
             raise APIError(f"Network error: {str(e)}")
 
     @property

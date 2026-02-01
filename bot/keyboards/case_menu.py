@@ -4,7 +4,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 def get_case_detail_menu(case_id: int, case_number: str) -> InlineKeyboardMarkup:
     """
     Main menu when viewing a case.
-    Shows 8 sections + generate document button.
+    Shows 8 sections + document options.
     """
     keyboard = [
         [InlineKeyboardButton(text="👤 Данные клиента", callback_data=f"case:{case_id}:client")],
@@ -15,7 +15,10 @@ def get_case_detail_menu(case_id: int, case_number: str) -> InlineKeyboardMarkup
         [InlineKeyboardButton(text="🏠 Имущество", callback_data=f"case:{case_id}:property")],
         [InlineKeyboardButton(text="📝 Сделки (3 года)", callback_data=f"case:{case_id}:transactions")],
         [InlineKeyboardButton(text="⚖️ Суд и СРО", callback_data=f"case:{case_id}:court")],
-        [InlineKeyboardButton(text="📄 Создать заявление", callback_data=f"doc_{case_id}")],
+        [
+            InlineKeyboardButton(text="📄 Создать документ", callback_data=f"doc_{case_id}"),
+            InlineKeyboardButton(text="📂 Документы дела", callback_data=f"case:{case_number}:documents"),
+        ],
         [InlineKeyboardButton(text="◀️ Назад к списку", callback_data="back_to_list")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

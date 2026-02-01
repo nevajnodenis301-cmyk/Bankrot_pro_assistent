@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states.case_states import CaseCreation
 from services.api_client import APIClient
-from keyboards.inline import get_yes_no_keyboard, get_cases_keyboard, get_case_keyboard
+from keyboards.inline import get_yes_no_keyboard, get_cases_keyboard, get_case_keyboard, get_procedure_type_keyboard
 from keyboards.case_menu import get_case_detail_menu
 from keyboards.reply import get_navigation_keyboard, get_main_keyboard
 from exceptions import (
@@ -88,13 +88,53 @@ async def process_total_debt(message: Message, state: FSMContext):
         return
 
     await state.update_data(total_debt=debt, creditors=[])
-    await state.set_state(CaseCreation.waiting_creditor_name)
+    await state.set_state(CaseCreation.waiting_procedure_type)
     await message.answer(
+        "⚖️ <b>Выберите тип процедуры банкротства:</b>\n\n"
+        "🏠 <b>Реализация имущества</b> — продажа имущества для погашения долгов\n\n"
+        "📊 <b>Реструктуризация долгов</b> — план погашения долгов с возможностью сохранения имущества",
+        parse_mode="HTML",
+        reply_markup=get_procedure_type_keyboard()
+    )
+
+
+@router.callback_query(CaseCreation.waiting_procedure_type, F.data.startswith("procedure:"))
+async def process_procedure_type(callback: CallbackQuery, state: FSMContext):
+    action = callback.data.split(":")[1]
+
+    if action == "back":
+        await state.set_state(CaseCreation.waiting_total_debt)
+        await callback.message.answer(
+            "💰 Введите общую сумму долга (в рублях):\n"
+            "<i>Например: 500000</i>",
+            parse_mode="HTML",
+            reply_markup=get_navigation_keyboard(show_back=True)
+        )
+        await callback.answer()
+        return
+
+    if action == "cancel":
+        await state.clear()
+        await callback.message.answer(
+            "❌ Создание дела отменено.",
+            reply_markup=get_main_keyboard()
+        )
+        await callback.answer()
+        return
+
+    # Save procedure type
+    await state.update_data(procedure_type=action)
+    await state.set_state(CaseCreation.waiting_creditor_name)
+
+    procedure_name = "Реализация имущества" if action == "Property Realization" else "Реструктуризация долгов"
+    await callback.message.answer(
+        f"✅ Выбрана процедура: <b>{procedure_name}</b>\n\n"
         "🏦 Введите название первого кредитора:\n"
         "<i>Например: Сбербанк, Альфа-Банк, МФО Быстроденьги</i>",
         parse_mode="HTML",
         reply_markup=get_navigation_keyboard(show_back=True)
     )
+    await callback.answer()
 
 
 @router.message(CaseCreation.waiting_creditor_name)
@@ -114,13 +154,14 @@ async def process_creditor_name(message: Message, state: FSMContext):
                 reply_markup=get_yes_no_keyboard()
             )
         else:
-            # If no creditors yet, go back to total debt
-            await state.set_state(CaseCreation.waiting_total_debt)
+            # If no creditors yet, go back to procedure type selection
+            await state.set_state(CaseCreation.waiting_procedure_type)
             await message.answer(
-                "💰 Введите общую сумму долга (в рублях):\n"
-                "<i>Например: 500000</i>",
+                "⚖️ <b>Выберите тип процедуры банкротства:</b>\n\n"
+                "🏠 <b>Реализация имущества</b> — продажа имущества для погашения долгов\n\n"
+                "📊 <b>Реструктуризация долгов</b> — план погашения долгов с возможностью сохранения имущества",
                 parse_mode="HTML",
-                reply_markup=get_navigation_keyboard(show_back=True)
+                reply_markup=get_procedure_type_keyboard()
             )
         return
 
@@ -253,7 +294,11 @@ async def finish_creditors(callback: CallbackQuery, state: FSMContext):
             total_debt=data["total_debt"],
             telegram_user_id=callback.from_user.id,
             creditors=data["creditors"],
+            procedure_type=data.get("procedure_type"),
         )
+
+        procedure_type = data.get("procedure_type", "")
+        procedure_name = "Реализация имущества" if procedure_type == "Property Realization" else "Реструктуризация долгов" if procedure_type == "Debt Restructuring" else "не указана"
 
         await state.clear()
         await callback.message.answer(
@@ -261,6 +306,7 @@ async def finish_creditors(callback: CallbackQuery, state: FSMContext):
             f"📁 Номер дела: <code>{case['case_number']}</code>\n"
             f"👤 ФИО: {case['full_name']}\n"
             f"💰 Общая сумма долга: {case['total_debt']:,.0f} руб.\n"
+            f"⚖️ Процедура: {procedure_name}\n"
             f"🏦 Количество кредиторов: {len(data['creditors'])}\n\n"
             "ℹ️ <i>Дополнительные данные (паспорт, ИНН, СНИЛС) вы можете добавить через веб-интерфейс.</i>\n\n"
             "Используйте /список_дел для просмотра всех дел.",
@@ -336,10 +382,18 @@ async def show_case_details(callback: CallbackQuery):
         total_debt = case.get("total_debt")
         debt_str = f"{float(total_debt):,.0f} ₽" if total_debt else "не указан"
 
+        # Format procedure type
+        procedure_type = case.get("procedure_type", "")
+        procedure_str = {
+            "Property Realization": "🏠 Реализация имущества",
+            "Debt Restructuring": "📊 Реструктуризация долгов",
+        }.get(procedure_type, "не указана")
+
         text = (
             f"{status_emoji} <b>Дело {case['case_number']}</b>\n\n"
             f"👤 <b>ФИО:</b> {case['full_name']}\n"
             f"💰 <b>Долг:</b> {debt_str}\n"
+            f"⚖️ <b>Процедура:</b> {procedure_str}\n"
             f"🏦 <b>Кредиторов:</b> {len(case.get('creditors', []))}\n"
             f"📅 <b>Создано:</b> {case['created_at'][:10]}\n\n"
             f"<i>Выберите раздел для просмотра или редактирования:</i>"
