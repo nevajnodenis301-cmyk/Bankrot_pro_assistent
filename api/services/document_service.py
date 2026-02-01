@@ -13,6 +13,11 @@ RUSSIAN_MONTHS = {
     9: "сентября", 10: "октября", 11: "ноября", 12: "декабря"
 }
 
+PROCEDURE_TYPE_LABELS = {
+    "Property Realization": "Property Realization",
+    "Debt Restructuring": "Debt Restructuring",
+}
+
 
 def format_russian_date(date_obj) -> str:
     """Format date in Russian format: '01 января 2024'"""
@@ -79,6 +84,18 @@ def format_amount_with_words(rubles: int, kopecks: int) -> dict:
         "amount_kopecks": f"{kopecks:02d}",
         "amount_kopecks_word": kopecks_declension(kopecks)
     }
+
+def get_procedure_type_context(case) -> dict:
+    procedure_type = case.procedure_type or ""
+    return {
+        "procedure_type": procedure_type,
+        "procedure_type_label": PROCEDURE_TYPE_LABELS.get(procedure_type, procedure_type),
+    }
+
+def format_total_debt(amount: Decimal | float | None) -> str:
+    if amount is None:
+        return "0"
+    return f"{float(amount):,.0f}".replace(",", " ")
 
 
 def generate_bankruptcy_petition(case) -> BytesIO:
@@ -286,6 +303,8 @@ def generate_bankruptcy_petition(case) -> BytesIO:
         # Date
         "petition_date": datetime.now().strftime("%d.%m.%Y"),
     }
+
+    context.update(get_procedure_type_context(case))
     
     # Render template
     doc.render(context)
@@ -295,4 +314,50 @@ def generate_bankruptcy_petition(case) -> BytesIO:
     doc.save(buffer)
     buffer.seek(0)
     
+    return buffer
+
+
+def generate_bankruptcy_application(case) -> BytesIO:
+    """
+    Generate basic bankruptcy application document from Case object.
+    Uses the bankruptcy_application.docx template.
+    """
+    template_path = TEMPLATES_DIR / "bankruptcy_application.docx"
+    if not template_path.exists():
+        raise FileNotFoundError(f"Template not found: {template_path}")
+
+    doc = DocxTemplate(template_path)
+
+    creditors_list = []
+    for creditor in case.creditors:
+        creditors_list.append(
+            {
+                "name": creditor.name,
+                "debt_amount": format_total_debt(creditor.debt_amount),
+                "debt_type": creditor.debt_type or "",
+            }
+        )
+
+    passport_parts = [part for part in [case.passport_series, case.passport_number] if part]
+    passport_value = " ".join(passport_parts)
+
+    context = {
+        "case_number": case.case_number,
+        "full_name": case.full_name,
+        "birth_date": format_russian_date(case.birth_date),
+        "passport": passport_value,
+        "inn": case.inn or "",
+        "address": case.registration_address or "",
+        "total_debt": format_total_debt(case.total_debt),
+        "creditors_count": len(case.creditors),
+        "creditors": creditors_list,
+        "current_date": datetime.now().strftime("%d.%m.%Y"),
+    }
+
+    context.update(get_procedure_type_context(case))
+
+    doc.render(context)
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
     return buffer

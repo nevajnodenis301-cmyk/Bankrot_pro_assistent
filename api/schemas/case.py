@@ -2,6 +2,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, field_validator
 
+PROCEDURE_TYPES = {"Property Realization", "Debt Restructuring"}
+
 
 # === Creditors ===
 class CreditorBase(BaseModel):
@@ -100,12 +102,22 @@ class CaseCreate(BaseModel):
     full_name: str
     total_debt: Decimal | None = None
     telegram_user_id: int | None = None
+    procedure_type: str | None = None
 
     @field_validator("total_debt")
     @classmethod
     def validate_debt(cls, v: Decimal | None):
         if v is not None and v < 0:
             raise ValueError("total_debt must be non-negative")
+        return v
+
+    @field_validator("procedure_type")
+    @classmethod
+    def validate_procedure_type(cls, v: str | None):
+        if v is None:
+            return v
+        if v not in PROCEDURE_TYPES:
+            raise ValueError(f"procedure_type must be one of {', '.join(sorted(PROCEDURE_TYPES))}")
         return v
 
 
@@ -120,6 +132,7 @@ class CaseUpdate(BaseModel):
     passport_code: str | None = None
     court_name: str | None = None
     court_address: str | None = None
+    procedure_type: str | None = None
     gender: str | None = None
     marital_status: str | None = None
     sro_name: str | None = None
@@ -194,6 +207,15 @@ class CaseUpdate(BaseModel):
             raise ValueError("gender must be 'M' or 'F'")
         return v
 
+    @field_validator("procedure_type")
+    @classmethod
+    def validate_procedure_type(cls, v: str | None):
+        if v is None:
+            return v
+        if v not in PROCEDURE_TYPES:
+            raise ValueError(f"procedure_type must be one of {', '.join(sorted(PROCEDURE_TYPES))}")
+        return v
+
 
 # === Case: public response (for bot) ===
 class CasePublic(BaseModel):
@@ -223,6 +245,7 @@ class CaseResponse(BaseModel):
     passport_code: str | None
     court_name: str | None
     court_address: str | None
+    procedure_type: str | None
     gender: str | None
     marital_status: str | None
     spouse_name: str | None

@@ -38,6 +38,9 @@ class Case(Base):
     # Court Information
     court_name: Mapped[str | None] = mapped_column(String(255))
     court_address: Mapped[str | None] = mapped_column(Text)
+
+    # Procedure Type
+    procedure_type: Mapped[str | None] = mapped_column(String(50))
     
     # IP Status
     ip_certificate_number: Mapped[str | None] = mapped_column(String(100))
