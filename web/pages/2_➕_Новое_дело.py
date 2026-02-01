@@ -19,8 +19,8 @@ API_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 def get_headers():
     """Get fresh auth headers for each API call."""
     return get_auth_headers()
-
-
+# DOC_HELPERS
+# DOC_HELPERS_OK
 st.title("➕ Новое дело")
 
 # Show user in sidebar
@@ -489,6 +489,17 @@ with st.form("case_form"):
             placeholder="г. Москва, ул. Большая Тульская, д. 17"
         )
 
+        procedure_type_options = ["Property Realization", "Debt Restructuring"]
+        if existing_case and existing_case.get("procedure_type") in procedure_type_options:
+            procedure_index = procedure_type_options.index(existing_case.get("procedure_type"))
+        else:
+            procedure_index = 0
+        procedure_type = st.selectbox(
+            "Procedure Type *",
+            options=procedure_type_options,
+            index=procedure_index,
+        )
+
     with col2:
         sro_name = st.text_input(
             "Название СРО арбитражных управляющих",
@@ -581,6 +592,7 @@ with st.form("case_form"):
                     "monthly_income": monthly_income if monthly_income > 0 else None,
                     "court_name": court_name or None,
                     "court_address": court_address or None,
+                    "procedure_type": procedure_type,
                     "sro_name": sro_name or None,
                     "sro_address": sro_address or None,
                     "notes": notes or None,
