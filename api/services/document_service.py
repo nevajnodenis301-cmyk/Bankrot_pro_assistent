@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from decimal import Decimal
 
-TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
+TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
 # Russian month names in genitive case
 RUSSIAN_MONTHS = {
