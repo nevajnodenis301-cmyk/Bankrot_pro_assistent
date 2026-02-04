@@ -103,10 +103,10 @@ def generate_bankruptcy_petition(case) -> BytesIO:
     Generate comprehensive bankruptcy petition from Case object.
     Uses the new comprehensive template with all fields.
     """
-    template_path = TEMPLATES_DIR / "bankruptcy_petition_template_v1_jinja2.docx"
+    template_path = TEMPLATES_DIR / "bankruptcy_petition_template_FINAL.docx"
     if not template_path.exists():
         raise FileNotFoundError(
-            "Template not found: templates/bankruptcy_petition_template_v1_jinja2.docx"
+            "Template not found: templates/bankruptcy_petition_template_FINAL.docx"
         )
     
     doc = DocxTemplate(template_path)

@@ -22,20 +22,22 @@ from utils.authorization import verify_case_access
 router = APIRouter(
     prefix="/api/documents",
     tags=["documents"],
-    dependencies=[Depends(get_user_or_api_token)]
 )
 
+# Available document types with their generators
+# Note: Only include templates that actually exist in templates/ directory
 DOCUMENT_TYPES = {
     "bankruptcy_petition": {
-        "label": "Bankruptcy Petition",
-        "description": "Full petition with comprehensive data",
+        "label": "Заявление о банкротстве (полное)",
+        "description": "Полное заявление о признании гражданина банкротом со всеми данными",
         "generator": generate_bankruptcy_petition,
     },
-    "bankruptcy_application": {
-        "label": "Bankruptcy Application",
-        "description": "Basic application template",
-        "generator": generate_bankruptcy_application,
-    },
+    # TODO: Add bankruptcy_application when template is created
+    # "bankruptcy_application": {
+    #     "label": "Заявление о банкротстве (базовое)",
+    #     "description": "Базовое заявление о банкротстве",
+    #     "generator": generate_bankruptcy_application,
+    # },
 }
 
 
@@ -62,7 +64,7 @@ async def get_case_with_access(case_id: int, db: AsyncSession, current_user):
     result = await db.execute(select(Case).where(Case.id == case_id))
     case = result.scalar_one_or_none()
     if not case:
-        raise HTTPException(status_code=404, detail="Р”РµР»Рѕ РЅРµ РЅР°Р№РґРµРЅРѕ")
+        raise HTTPException(status_code=404, detail="Дело не найдено")
     return case
 
 
@@ -75,7 +77,10 @@ def build_document_response(file_path, file_name: str):
 
 
 @router.get("/types", response_model=list[DocumentTypeResponse])
-async def list_document_types():
+async def list_document_types(
+    current_user=Depends(get_user_or_api_token),
+):
+    """List available document types."""
     return [
         DocumentTypeResponse(
             document_type=doc_type,
@@ -125,7 +130,7 @@ async def generate_case_document(
     case = await get_case_with_access(case_id, db, current_user)
     case_with_relations = await load_case_for_document(case_id, db)
     if not case_with_relations:
-        raise HTTPException(status_code=404, detail="Р”РµР»Рѕ РЅРµ РЅР°Р№РґРµРЅРѕ")
+        raise HTTPException(status_code=404, detail="Дело не найдено")
 
     generator = DOCUMENT_TYPES[payload.document_type]["generator"]
     doc_buffer = generator(case_with_relations)
@@ -170,7 +175,7 @@ async def get_bankruptcy_application(
     case_with_relations = await load_case_for_document(case_id, db)
 
     if not case_with_relations:
-        raise HTTPException(status_code=404, detail="Р”РµР»Рѕ РЅРµ РЅР°Р№РґРµРЅРѕ")
+        raise HTTPException(status_code=404, detail="Дело не найдено")
 
     try:
         doc_buffer = generate_bankruptcy_application(case_with_relations)
@@ -178,9 +183,9 @@ async def get_bankruptcy_application(
         file_path = save_document(case, file_name, doc_buffer)
         return build_document_response(file_path, file_name)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=500, detail=f"РЁР°Р±Р»РѕРЅ РґРѕРєСѓРјРµРЅС‚Р° РЅРµ РЅР°Р№РґРµРЅ: {e}")
+        raise HTTPException(status_code=500, detail=f"Шаблон документа не найден: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"РћС€РёР±РєР° РіРµРЅРµСЂР°С†РёРё РґРѕРєСѓРјРµРЅС‚Р°: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации документа: {str(e)}")
 
 
 @router.get("/cases/{case_id}/document/petition")
@@ -194,7 +199,7 @@ async def get_bankruptcy_petition(
     case_with_relations = await load_case_for_document(case_id, db)
 
     if not case_with_relations:
-        raise HTTPException(status_code=404, detail="Р”РµР»Рѕ РЅРµ РЅР°Р№РґРµРЅРѕ")
+        raise HTTPException(status_code=404, detail="Дело не найдено")
 
     try:
         doc_buffer = generate_bankruptcy_petition(case_with_relations)
@@ -202,6 +207,6 @@ async def get_bankruptcy_petition(
         file_path = save_document(case, file_name, doc_buffer)
         return build_document_response(file_path, file_name)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=500, detail=f"РЁР°Р±Р»РѕРЅ РґРѕРєСѓРјРµРЅС‚Р° РЅРµ РЅР°Р№РґРµРЅ: {e}")
+        raise HTTPException(status_code=500, detail=f"Шаблон документа не найден: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"РћС€РёР±РєР° РіРµРЅРµСЂР°С†РёРё РґРѕРєСѓРјРµРЅС‚Р°: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации документа: {str(e)}")

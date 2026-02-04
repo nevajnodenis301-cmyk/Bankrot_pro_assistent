@@ -53,21 +53,33 @@ class CaseService:
         return list(result.scalars().all())
 
     async def get_by_id(self, case_id: int) -> Case | None:
-        """Get case by ID with creditors and debts"""
+        """Get case by ID with all relationships eagerly loaded"""
         result = await self.db.execute(
-            select(Case).where(Case.id == case_id).options(
+            select(Case)
+            .where(Case.id == case_id)
+            .options(
                 selectinload(Case.creditors),
-                selectinload(Case.debts)
+                selectinload(Case.debts),
+                selectinload(Case.children),
+                selectinload(Case.income_records),
+                selectinload(Case.properties),
+                selectinload(Case.transactions),
             )
         )
         return result.scalar_one_or_none()
 
     async def get_by_case_number(self, case_number: str) -> Case | None:
-        """Get case by case number"""
+        """Get case by case number with all relationships eagerly loaded"""
         result = await self.db.execute(
-            select(Case).where(Case.case_number == case_number).options(
+            select(Case)
+            .where(Case.case_number == case_number)
+            .options(
                 selectinload(Case.creditors),
-                selectinload(Case.debts)
+                selectinload(Case.debts),
+                selectinload(Case.children),
+                selectinload(Case.income_records),
+                selectinload(Case.properties),
+                selectinload(Case.transactions),
             )
         )
         return result.scalar_one_or_none()

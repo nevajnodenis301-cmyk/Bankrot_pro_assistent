@@ -35,7 +35,16 @@ async def verify_case_access(
 ) -> Case:
     """Verify user has access to a case and return it. Raises 404 if not found, 403 if not owner."""
     result = await db.execute(
-        select(Case).options(selectinload(Case.creditors)).where(Case.id == case_id)
+        select(Case)
+        .options(
+            selectinload(Case.creditors),
+            selectinload(Case.debts),
+            selectinload(Case.children),
+            selectinload(Case.income_records),
+            selectinload(Case.properties),
+            selectinload(Case.transactions),
+        )
+        .where(Case.id == case_id)
     )
     case = result.scalar_one_or_none()
     if not case:
