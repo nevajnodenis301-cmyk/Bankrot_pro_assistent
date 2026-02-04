@@ -63,6 +63,7 @@ htmlcov/
 # Generated documents
 *.docx
 !api/templates/*.docx
+!templates/*.docx
 
 # Redis
 dump.rdb

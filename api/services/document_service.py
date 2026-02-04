@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from decimal import Decimal
 
-TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
+TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
 
 # Russian month names in genitive case
 RUSSIAN_MONTHS = {
@@ -103,9 +103,11 @@ def generate_bankruptcy_petition(case) -> BytesIO:
     Generate comprehensive bankruptcy petition from Case object.
     Uses the new comprehensive template with all fields.
     """
-    template_path = TEMPLATES_DIR / "bankruptcy_petition_template.docx"
+    template_path = TEMPLATES_DIR / "bankruptcy_petition_template_v1_jinja2.docx"
     if not template_path.exists():
-        raise FileNotFoundError(f"Template not found: {template_path}")
+        raise FileNotFoundError(
+            "Template not found: templates/bankruptcy_petition_template_v1_jinja2.docx"
+        )
     
     doc = DocxTemplate(template_path)
     

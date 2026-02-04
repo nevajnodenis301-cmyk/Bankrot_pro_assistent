@@ -2,6 +2,7 @@
 """
 Create a bankruptcy petition template compatible with docxtpl (Jinja2 syntax)
 """
+from pathlib import Path
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -224,5 +225,6 @@ doc.add_paragraph()
 doc.add_paragraph('{{ petition_date }}\t\t\t\t\t_____________ / {{ debtor_full_name }}')
 
 # Save
-doc.save('/root/bankrot_bot/api/templates/bankruptcy_petition_template.docx')
+output_path = Path(__file__).resolve().parent / "templates" / "bankruptcy_petition_template_v1_jinja2.docx"
+doc.save(str(output_path))
 print("✅ Template created with Jinja2 syntax!")

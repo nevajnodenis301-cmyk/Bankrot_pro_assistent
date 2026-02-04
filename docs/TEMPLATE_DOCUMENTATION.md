@@ -1,7 +1,7 @@
 # BANKRUPTCY PETITION TEMPLATE - COMPLETE DOCUMENTATION
 
 ## Template File
-`bankruptcy_petition_template.docx`
+`bankruptcy_petition_template_v1_jinja2.docx`
 
 ## Template Engine
 This template uses **Mustache/Handlebars** syntax with double curly braces: `{{variable_name}}`
@@ -390,7 +390,7 @@ appendices = [
 from docxtpl import DocxTemplate
 
 # Load template
-doc = DocxTemplate("bankruptcy_petition_template.docx")
+doc = DocxTemplate("bankruptcy_petition_template_v1_jinja2.docx")
 
 # Prepare data
 context = {
